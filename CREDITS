@@ -1,20 +1,21 @@
-Thanks to Tobias Oetiker, the author of RRD, for his very
-useful tool. Without RRD, Cricket would be useless.
+Thanks to Tobias Oetiker, the author of RRD, for his very useful tool.
+Without RRD, Cricket would be useless.
 
 The genDevConfig script is based on the hard work of:
 
-MRTG 2.8.8 cfgmaker by Tobias Oetiker 
-Cricket 0.71 listInterface by Jeff Allen
-genRtrConfig 1.4 by Mike Fisher
+  * MRTG 2.8.8 cfgmaker by Tobias Oetiker 
+  * Cricket 0.71 listInterface by Jeff Allen
+  * genRtrConfig 1.4 by Mike Fisher
 
-It was initially developped and integrated by Mike Fisher, who
-released the first public version of genRtrConfig on sourceforge
-(version 1.4).
+It was initially developped and integrated by Mike Fisher, who released the
+first public version of genRtrConfig on sourceforge (version 1.4).
 
-The script was further developped under the genRtrConfig name by Francois Mikus. As the script evolved the name was changed to genDevConfig
+The script was further developed under the genRtrConfig name by
+Francois Mikus. As the script evolved the name was changed to genDevConfig
 to reflect the new scope and mechanic.
 
-This script would not be where it is right now without the involvement of these fine people.
+This script would not be where it is right now without the involvement of
+these fine people.
 
 Terje Bless 
 - Ideas, QA, patches, cvs magic.
@@ -60,3 +61,4 @@ Bruno Clermont, bruno _AT_ gnome . ca
 - Ideas, complaints and being a pest about things that don't work.
 
 If you have been forgotten, please send me a note. fmikus _AT_ acktomic . com
+

@@ -28,22 +28,22 @@ logical information:
 #
 ##############################################################################
 
- - ./util/genDevConfig               # The script
- - ./util/CHANGES                    # Functional changes
- - ./util/CREDITS                    # Thank you notes to contributors
- - ./util/INSTALL                    # How to install this script in Cricket
- - ./cricket-config/genDevConfig/Defaults # The cricket config-tree Defaults 
- - ./cricket-config/genDevConfig/Defaults.* # The cricket config-tree module Defaults
- - ./lib/genConfig/File.pm           # Utility library that goes with genDevConfig
- - ./lib/genConfig/SNMP.pm           # Utility library that goes with genDevConfig
- - ./lib/genConfig/Utils.pm          # Utility library that goes with genDevConfig
- - ./lib/genConfig/plugin.pm         # Utility library that goes with genDevConfig
- - ./lib/genConfig/pluginUtils.pm    # Utility library that goes with genDevConfig
- - ./lib/monitorConfig               # The configuration file for 
-                                     # Cricket monitor thresholds
- - ./plugins/genConfig/Netscreen.pm      # The plugin directory
- - ./plugins/genConfig/CiscoIOS.pm       # The plugin directory
- - ./plugins/genConfig/CatalystCatOS.pm  # The plugin directory
+ - util/genDevConfig                  # The script
+ - util/CHANGES                       # Functional changes
+ - util/CREDITS                       # Thank you notes to contributors
+ - util/INSTALL                       # How to install this script in Cricket
+ - sample-config/genConfig/Defaults   # The cricket config-tree Defaults 
+ - sample-config/genConfig/Defaults.* # The cricket config-tree module Defaults
+ - lib/genConfig/File.pm              # Utility library for genDevConfig
+ - lib/genConfig/SNMP.pm              # Utility library for genDevConfig
+ - lib/genConfig/Utils.pm             # Utility library for genDevConfig
+ - lib/genConfig/plugin.pm            # Utility library for genDevConfig
+ - lib/genConfig/pluginUtils.pm       # Utility library for genDevConfig
+ - lib/monitorConfig                  # The configuration file for 
+                                      # Cricket monitor thresholds
+ - plugins/genConfig/Netscreen.pm     # The plugin directory
+ - plugins/genConfig/CiscoIOS.pm      # The plugin directory
+ - plugins/genConfig/CatalystCatOS.pm # The plugin directory
 
 
 ##############################################################################
@@ -71,28 +71,27 @@ If this is the first time you install genDevConfig 2.0.x and higher
 Copy monitorConfig to your $CRICKET/lib directory
 
 If this is not your first time, take a peek at the monitorConfig file to see
- if anything new was added.
+if anything new was added.
 
 
 ### Step 4 (Copying the Defaults file to your cricket-config tree)
 
-If you use the genDevConfig Defaults file included in this release within your Cricket
- config-tree. See example below.
-You should replace the Defaults file with the new version. 
+If you use the genDevConfig Defaults file included in this release within
+your Cricket config-tree (see the example below). You should replace the
+Defaults file with the new version. 
 
-Note: If you do *NOT* use a vanilla version of the genDevConfig Defaults file, then
-you must copy the changes from the new Defaults file to your own "custom" Defaults.
+Note: If you do *NOT* use a vanilla version of the genDevConfig Defaults
+file, then you must copy the changes from the new Defaults file to your
+own custom Defaults.
 
-exi for creating and copying theDefault files:
+Example of creating and copying the Default files:
 
-# For lazy bash users
-export CRICKET=/path/to/cricket-base
-
-cd $CRICKET/cricket-config
-
-mkdir telecom-tree
-
-cp $CRICKET/sample-config/genDevConfig/Defaults* $CRICKET/cricket-config/telecom-tree/
+  # For lazy bash users
+  $ export CRICKET=/path/to/cricket-base
+  $ cd $CRICKET/cricket-config
+  $ mkdir telecom-tree
+  $ cp $CRICKET/sample-config/genDevConfig/Defaults* \
+       $CRICKET/cricket-config/telecom-tree/
 
 
 ##############################################################################
@@ -198,3 +197,5 @@ Gotchas:
    Some Cisco routers return incorrect interface types for some interfaces.
    Example: Tunnel interfaces return type 0 under IOS 12.0.7T on a 7206
    rather than the expected type 131.  Try "-e 'Tunnel.*'".
+
+
