@@ -1,0 +1,1912 @@
+#! /usr/bin/perl -w
+# -*- mode: Perl -*-
+##############################################################################
+#
+# genDevConfig - Generate Cricket config tree for various network devices.
+#
+#                See INSTALLATION.genDevConfig for more info.
+#
+#    Copyright (C) 2000 Mike Fisher and Tech Data Corporation
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+# Created: 03/09/00 - Mike Fisher <mlf at users.sourceforge.net>  (no spam!)
+#                   Based on MRTG 2.8.8 cfgmaker by Tobias Oetiker
+#                   and Cricket 0.71 listInterface by Jeff Allen
+#
+# Re-released: 12/11/02  - Francois Mikus   "fmikus" . "@" . "acktomic.com"
+#                   Based on Mike Fisher's great work.
+#
+# Re-named:    05/03/04  - Francois Mikus   "fmikus" . "@" . "acktomic.com"
+#
+# Mods and Credits:    See CHANGES.genDevConfig
+#
+##############################################################################
+package Common::genRtrConfig;
+
+require Exporter;
+
+my ($gInstallRoot);
+BEGIN {
+    $gInstallRoot = (($0 =~ m:^(.*/):)[0] || "./") . "..";
+}
+
+use lib "$gInstallRoot/lib";
+use lib "$gInstallRoot/plugins/genConfig";
+use strict;
+no strict 'refs';
+
+use snmpUtils;
+use Common::Log;
+use Socket;
+use Net::hostent;
+use genConfig::File;        ### File methods and subdir.
+use genConfig::SNMP;        ### SNMP get and gettable.
+use genConfig::Utils;       ### Misc
+use genConfig::pluginUtils; ### Plugin processing
+
+# Common::Log::setFormat('extended');
+
+my $monitorConfig = "$gInstallRoot/lib/monitorConfig";
+
+my $VERSION = 'genDevConfig 2.0.0beta8';
+
+###############################################################################
+
+sub usage {
+#'
+    print STDERR <<EOD;
+VERSION: $VERSION
+USAGE: $0 [options] hostname
+
+   --b                   - Report speeds in bytes/second rather than
+   --bytes                 bits/second.
+   -c <community>        - Set SNMP read community. (default: public)
+   --community <community>
+   -C <community>        - Same as -c, but include community in the config too.
+   --addcommunity <community>
+   --communityrw <community-rw>
+                          - Include the snmp-rw string in the config
+                               (only useful with getRunningConfig script)
+                               (which is used for backing up the devices)
+                               (configuration via SNMP and tftp in CVS)
+
+   -d <list>             - Don't collect interfaces with these types.  <list>
+   --dontcollect <list>    is a comma separated list on numeric interface
+                           types.
+   -e <regex>            - Interfaces types that match the given regular
+   --exception <regex>     expression are exceptions to the 'dontcollect' list.
+                           Can be used multiple times. Case insensitive.
+   -h                    - Print this message.
+   --help
+   --default "key:text"  - Add arbitrary values to the --default-- entry
+                           of a target. This option can be used multiple times.
+                           Example: --default "nostate:true"
+   -i       "key:text"   - Arbitrary values to be stored in chassis target
+                           of the devices config-tree.
+   --info   "key:text"     This option can be used multiple times.
+                           Example: -i "testsla:true"
+                                    -i "pagergroup:admins"
+   --ip <ip>             - Specify an alternate ip address for the device
+                           in case the hostname should not be resolved. 
+			   Most people use an IP or HOSTNAME for the hostname
+			   option, but due to natting and firewalled zones,
+			   it may be necessary to specify the IP and the hostname
+			   directly on the command-line.
+   --loglevel <level>    - Set Verbose Level 
+                           debug, monitor, info, warn, error
+                           Default level is "warn"
+   -l                    - Force all subdirectory names to lowercase.
+   --lowercase
+   --modular             -  Treat the device as modular; that is, generate
+                            subdirectories for each module and place that
+                            module's interfaces or ports inside. Note that
+                            not including this option when processing a modular
+                            device will work just fine. You just won't get the
+                            hierarchical layout of the interfaces.
+   -m                    - Enable threshold monitoring on the target.
+   --monitors                  (Configured in  ./lib/monitorConfig)
+   -n                    - Disable Address to Name instance mapping
+   --nodns
+   --noframestats          Report frame relay interface stats. (BECN/FECN)
+   --nortragents         - Collect data on all active SAA (RTR) Agents
+                               (only useful on Cisco routers)
+                               (OperStatus must be 6 (active) to be included)
+   --namedonly           - Comment out all interfaces that have no description.
+                               (Supported for most plateforms)
+   --nodupwarn           - Don't put warnings about hard coded inst numbers on
+                           the generated HTML pages.
+   --showunused            - Show unused (commented out) interfaces from the
+                           config entirely.  This also affects interfaces
+                           commented out with --namedonly.
+
+   -Pxxx                 - Pass flag 'xxx' and possibly value 'yyy' to the 
+   -Pxxx=yyy               active plugin.  Can be used multiple times.
+   -Ph                   - print the active module's help info and exit. This
+   -Phelp                  is a special case of '-Pxxx'.
+
+   -p <portlist>         - Collect data for the listed ports only.
+   --ports <portlist>      "0/*,1/5-7,4/6" Example of supported syntax.
+                           Dont forget to double quote your comma delimited list.
+   --forceplugin <name>  - Explicitly select the plugin that will be used with this
+                           device. Use this option in case the device matches
+			   multiple plugins.
+
+   --access              - Specify that this is an access switch (Cisco design theory)
+                           This will activate only minimal thresholds on the 10/100 ports
+                           and full collection on any 1000 ports
+                               (currently only useful on Cisco gear)
+   --gigonly             - This will process only the gigabit interfaces with
+                           full threholds and collection.
+                           *This will comment out all interfaces of less than gigabit speed.
+   --sortby <key>        - Arbitrary values to store in cricket config-tree
+                           Primarly used for display and sorting in outside scripts
+                           Adds to the chassis target: sortby = <key>
+                               (valid for all equipments)
+   -2                    - Use SNMP version 2c and retrieve high capacity
+   --snmpv2c               counters where possible. Will still use snmpv1
+                           for non interface counters.
+   --version             - Display version number
+   --vendorint           - Get extra interface stats from proprietary MIB (For CiscoIOS and CatalystOS) or MIB-II (for all others).
+                           This uses more data sources in the resulting RRD.
+                           Support for Cisco, Foundry, extended MIB-II.
+   --vlans               - Display VLAN interfaces (should you want them?)
+                           Add VLANs to the targets file. They are normally skipped.
+   --voip                - Report VoIP peer stats
+
+EXAMPLE:  $0 -c public -2 --namedonly MyRouterName
+
+EOD
+#'
+    exit(1);
+}
+
+
+sub version {
+
+    print STDOUT "VERSION: $VERSION\n";
+    exit(0);
+}
+###############################################################################
+
+my(%ifType_d)=('1'   => 'Other',
+           '2'   => 'regular1822',
+           '3'   => 'hdh1822',
+           '4'   => 'ddnX25',
+           '5'   => 'rfc877x25',
+           '6'   => 'ethernetCsmacd',
+           '7'   => 'iso88023Csmacd',
+           '8'   => 'iso88024TokenBus',
+           '9'   => 'iso88025TokenRing',
+           '10'  => 'iso88026Man',
+           '11'  => 'starLan',
+           '12'  => 'proteon10Mbit',
+           '13'  => 'proteon80Mbit',
+           '14'  => 'hyperchannel',
+           '15'  => 'fddi',
+           '16'  => 'lapb',
+           '17'  => 'sdlc',
+           '18'  => 'ds1',
+           '19'  => 'e1',
+           '20'  => 'basicISDN',
+           '21'  => 'primaryISDN',
+           '22'  => 'propPointToPointSerial',
+           '23'  => 'ppp',
+           '24'  => 'softwareLoopback',
+           '25'  => 'eon',
+           '26'  => 'ethernet-3Mbit',
+           '27'  => 'nsip',
+           '28'  => 'slip',
+           '29'  => 'ultra',
+           '30'  => 'ds3',
+           '31'  => 'sip',
+           '32'  => 'frame-relay',
+           '33'  => 'rs232',
+           '34'  => 'para',
+           '35'  => 'arcnet',
+           '36'  => 'arcnetPlus',
+           '37'  => 'atm',
+           '38'  => 'miox25',
+           '39'  => 'sonet',
+           '40'  => 'x25ple',
+           '41'  => 'iso88022llc',
+           '42'  => 'localTalk',
+           '43'  => 'smdsDxi',
+           '44'  => 'frameRelayService',
+           '45'  => 'v35',
+           '46'  => 'hssi',
+           '47'  => 'hippi',
+           '48'  => 'modem',
+           '49'  => 'aal5',
+           '50'  => 'sonetPath',
+           '51'  => 'sonetVT',
+           '52'  => 'smdsIcip',
+           '53'  => 'propVirtual',
+           '54'  => 'propMultiplexor',
+           '55'  => '100BaseVG',
+           #### New IF Types added 9/24/98 by Russ Carleton
+               #### (roccor@livenetworking.com)
+           #### based on the IANA file updated at
+           #### ftp://ftp.isi.edu/mib/ianaiftype.mib
+           '56'  => 'Fibre Channel',
+           '57'  => 'HIPPI Interface',
+           '58'  => 'Obsolete for FrameRelay',
+           '59'  => 'ATM Emulation of 802.3 LAN',
+           '60'  => 'ATM Emulation of 802.5 LAN',
+           '61'  => 'ATM Emulation of a Circuit',
+           '62'  => 'FastEthernet (100BaseT)',
+           '63'  => 'ISDN & X.25',
+           '64'  => 'CCITT V.11/X.21',
+           '65'  => 'CCITT V.36',
+           '66'  => 'CCITT G703 at 64Kbps',
+           '67'  => 'Obsolete G702 see DS1-MIB',
+           '68'  => 'SNA QLLC',
+           '69'  => 'Full Duplex Fast Ethernet (100BaseFX)',
+           '70'  => 'Channel',
+           '71'  => 'Radio Spread Spectrum (802.11)',
+           '72'  => 'IBM System 360/370 OEMI Channel',
+           '73'  => 'IBM Enterprise Systems Connection',
+           '74'  => 'Data Link Switching',
+           '75'  => 'ISDN S/T Interface',
+           '76'  => 'ISDN U Interface',
+           '77'  => 'Link Access Protocol D (LAPD)',
+           '78'  => 'IP Switching Opjects',
+           '79'  => 'Remote Source Route Bridging',
+           '80'  => 'ATM Logical Port',
+           '81'  => 'AT&T DS0 Point (64 Kbps)',
+           '82'  => 'AT&T Group of DS0 on a single DS1',
+           '83'  => 'BiSync Protocol (BSC)',
+           '84'  => 'Asynchronous Protocol',
+           '85'  => 'Combat Net Radio',
+           '86'  => 'ISO 802.5r DTR',
+           '87'  => 'Ext Pos Loc Report Sys',
+           '88'  => 'Apple Talk Remote Access Protocol',
+           '89'  => 'Proprietary Connectionless Protocol',
+           '90'  => 'CCITT-ITU X.29 PAD Protocol',
+           '91'  => 'CCITT-ITU X.3 PAD Facility',
+           '92'  => 'MultiProtocol Connection over Frame/Relay',
+           '93'  => 'CCITT-ITU X213',
+           '94'  => 'Asymetric Digitial Subscriber Loop (ADSL)',
+           '95'  => 'Rate-Adapt Digital Subscriber Loop (RDSL)',
+           '96'  => 'Symetric Digitial Subscriber Loop (SDSL)',
+           '97'  => 'Very High Speed Digitial Subscriber Loop (HDSL)',
+           '98'  => 'ISO 802.5 CRFP',
+           '99'  => 'Myricom Myrinet',
+           '100' =>    'Voice recEive and transMit (voiceEM)',
+           '101' =>    'Voice Foreign eXchange Office (voiceFXO)',
+           '102' =>    'Voice Foreign eXchange Station (voiceFXS)',
+           '103' =>    'Voice Encapulation',
+           '104' =>    'Voice Over IP Encapulation',
+           '105' =>    'ATM DXI',
+           '106' =>    'ATM FUNI',
+           '107' =>    'ATM IMA',
+           '108' =>    'PPP Multilink Bundle',
+           '109' =>    'IBM IP over CDLC',
+           '110' =>    'IBM Common Link Access to Workstation',
+           '111' =>    'IBM Stack to Stack',
+           '112' =>    'IBM Virtual IP Address (VIPA)',
+           '113' =>    'IBM Multi-Protocol Channel Support',
+           '114' =>    'IBM IP over ATM',
+           '115' =>    'ISO 802.5j Fiber Token Ring',
+           '116' =>    'IBM Twinaxial Data Link Control (TDLC)',
+           '117' =>    'Gigabit Ethernet',
+           '118' =>    'Higher Data Link Control (HDLC)',
+           '119' =>    'Link Access Protocol F (LAPF)',
+           '120' =>    'CCITT V.37',
+           '121' =>    'CCITT X.25 Multi-Link Protocol',
+           '122' =>    'CCITT X.25 Hunt Group',
+           '123' =>    'Transp HDLC',
+           '124' =>    'Interleave Channel',
+           '125' =>    'Fast Channel',
+           '126' =>    'IP (for APPN HPR in IP Networks)',
+           '127' =>    'CATV MAC Layer',
+           '128' =>    'CATV Downstream Interface',
+           '129' =>    'CATV Upstream Interface',
+           '130' =>    'Avalon Parallel Processor',
+           '131' =>    'Encapsulation Interface',
+           '132' =>    'Coffee Pot',
+           '133' =>    'Circuit Emulation Service',
+           '134' =>    'ATM Sub Interface',
+           '135' =>    'Layer 2 Virtual LAN using 802.1Q',
+           '136' =>    'Layer 3 Virtual LAN using IP',
+           '137' =>    'Layer 3 Virtual LAN using IPX',
+           '138' =>    'IP Over Power Lines',
+           '139' =>    'Multi-Media Mail over IP',
+           '140' =>    'Dynamic synchronous Transfer Mode (DTM)',
+           '141' =>    'Data Communications Network',
+           '142' =>    'IP Forwarding Interface',
+           #### New IF Types added 09/26/00
+           #### based on the IANA file updated at
+           #### ftp://ftp.isi.edu/mib/ianaiftype.mib
+               '143' => 'Multi-rate Symmetric DSL',
+               '144' => 'IEEE1394 High Performance Serial Bus',
+               '145' => 'HIPPI-6400',
+           '146' => 'DVB-RCC MAC Layer',
+           '147' => 'DVB-RCC Downstream Channel',
+           '148' => 'DVB-RCC Upstream Channel',
+           '149' => 'ATM Virtual Interface',
+           '150' => 'MPLS Tunnel Virtual Interface',
+           '151' => 'Spatial Reuse Protocol',
+           '152' => 'Voice Over ATM',
+           '153' => 'Voice Over Frame Relay',
+           '154' => 'Digital Subscriber Loop over ISDN',
+           '155' => 'Avici Composite Link Interface',
+           '156' => 'SS7 Signaling Link',
+           '157' => 'Prop. P2P wireless interface',
+           '158' => 'Frame Forward Interface',
+           '159' => 'Multiprotocol over ATM AAL5',
+           '160' => 'USB Interface',
+           '161' => 'IEEE 802.3ad Link Aggregate',
+           '162' => 'BGP Policy Accounting',
+           '163' => 'FRF .16 Multilink Frame Relay',
+           '164' => 'H323 Gatekeeper',
+           '165' => 'H323 Voice and Video Proxy',
+           '166' => 'MPLS',
+           '167' => 'Multi-frequency signaling link',
+           '168' => 'High Bit-Rate DSL - 2nd generation',
+           '169' => 'Multirate HDSL2',
+           '170' => 'Facility Data Link 4Kbps on a DS1',
+           '171' => 'Packet over SONET/SDH Interface',
+           '172' => 'DVB-ASI Input',
+           '173' => 'DVB-ASI Output',
+           '174' => 'Power Line Communtications',
+           '175' => 'Non Facility Associated Signaling',
+           '176' => 'TR008',
+           '177' => 'Remote Digital Terminal',
+           '178' => 'Integrated Digital Terminal',
+           '179' => 'ISUP',
+           '180' => 'prop/Maclayer',
+           '181' => 'prop/Downstream',
+           '182' => 'prop/Upstream',
+           '183' => 'HIPERLAN Type 2 Radio Interface',
+           '184' => 'PropBroadbandWirelessAccesspt2multipt',
+           '185' => 'SONET Overhead Channel',
+           '186' => 'Digital Wrapper',
+           );
+
+
+# Interface types that we don't deal with for one reason or another.  Index
+# to the list ifType_d above.
+
+my @DONTCOLLECT = (1, 18, 19, 24, 30, 37, 53, 59, 60, 61, 63, 74, 75, 76, 81, 94, 124, 134, 135, 162);
+
+
+# Exceptions to the above.
+# 1: Cisco tunnel interfaces return type 0
+# under IOS 12.0.7T rather than the expected type 131.  Adding 'Tunnel.*' to
+# this list works around this bug by overriding based on the interface name.
+
+my @EXCEPTIONS = ('Channel','Tunnel','ge-','fe-','fxp','at-');
+
+###############################################################################
+### MIB OID definitions.
+###############################################################################
+
+my %OID = (
+
+       ### from mib-2.system.
+
+       'sysDescr'         => '1.3.6.1.2.1.1.1.0',
+       'sysObjectID'      => '1.3.6.1.2.1.1.2.0',
+       'sysContact'       => '1.3.6.1.2.1.1.4.0',
+       'sysName'          => '1.3.6.1.2.1.1.5.0',
+       'sysLocation'      => '1.3.6.1.2.1.1.6.0',
+
+       ### from mib-2.interfaces.ifTable.ifEntry
+
+       'ifDescr'          => '1.3.6.1.2.1.2.2.1.2',
+       'ifType'           => '1.3.6.1.2.1.2.2.1.3',
+       'ifMtu'            => '1.3.6.1.2.1.2.2.1.4',
+       'ifSpeed'          => '1.3.6.1.2.1.2.2.1.5',
+       'ifAdminStatus'    => '1.3.6.1.2.1.2.2.1.7',
+       'ifOperStatus'     => '1.3.6.1.2.1.2.2.1.8',
+
+       ### from mib-2.ifMIB.ifMIBObjects.ifXTable.ifXEntry
+
+       'ifName'           => '1.3.6.1.2.1.31.1.1.1.1',
+       'ifHCInOctets'     => '1.3.6.1.2.1.31.1.1.1.6',
+       'ifAlias'          => '1.3.6.1.2.1.31.1.1.1.18',
+
+       ### from mib-2.ip.ipAddrTable.ipAddrEntry
+
+       'ipAdEntAddr'      => '1.3.6.1.2.1.4.20.1.1',
+       'ipAdEntIfIndex'   => '1.3.6.1.2.1.4.20.1.2',
+
+       ### from mib-2.entityMIB.entityMIBObjects.entityPhysical.
+       ###      entPhysicalTable.entPhysicalEntry
+
+       'entPhysicalDescr.1' => '1.3.6.1.2.1.47.1.1.1.1.2.1',
+       'entPhysicalName'            => '1.3.6.1.2.1.47.1.1.1.1.7',
+       'entPhysicalDescr'           => '1.3.6.1.2.1.47.1.1.1.1.2',
+       'entPhysicalModelName'       => '1.3.6.1.2.1.47.1.1.1.1.13',
+
+       ### Packeteer OIDs
+       'partitionMinimumBps'     => '1.3.6.1.4.1.2334.2.1.3.2.1.24',
+       'classFullName'           => '1.3.6.1.4.1.2334.2.1.4.2.1.36',
+
+       ### MIB-II Switch traffic statistics
+       'ipForwDatagrams'         => '1.3.6.1.2.1.4.6.0', ## Added .0 Check to see if this breaks
+       # some implementations...
+        );
+
+###############################################################################
+
+### General variables
+
+my($script) = $0 =~ /\/([^\/]+)$/;
+my $file;
+
+my %collectable = ();
+my %opts = (
+    'savedargs'         => join(" ", @ARGV),
+    'community'         => "public",
+    'units'             => "bits",
+    'inst'              => '',
+    'logLevel'          => 'warn',
+    'addcomm'           => 0,
+    'nodupwarn'         => 0,
+    'collectall'        => 1,
+    'chassisstats'      => 1,
+    'nounused'          => 1,
+    'lowercase'         => 0,
+    'communityrw'       => '',
+    'groupname'         => '',
+    'rtragents'         => 1,
+    'coreint'           => 0,
+    'accessint'         => 0,
+    'gigonly'           => 0,
+    'monitors'          => 0,
+    'refinfo'           => {},
+    'refdefault'        => {},
+    'nodns'             => 0,
+    'vpntunnels'        => 0,
+    'pixfirewallconnections'  => 0,
+    'netscreenfirewall'    => 0,
+    'wirelessAssociations' => 0,
+    'collect'              => 1, ### Empty targets should have this option unset
+    'rdir'                 => '',
+    'file'                 => '',
+    'model'                => '',
+    'class'                => '',
+    'chassisinst'          => '',
+    ### Target name for the chassis target in the cricket config-tree
+    'chassisname'          => 'Chassis',
+    ### Unique target type that matches a target-type in the cricket config-tree
+    'chassisttype'         => '',
+    'order'                => '999', # Base order for all graphical display
+    'plugindir'            => 'plugins/genConfig', # Alternate plugin directory
+    'pluginflags'          => {},
+
+    ### Variables requiring promotion
+
+    # Promotion is defined as:
+    #
+    # If the a request is made for a feature
+    # and the device supports the feature
+    # it will be promoted to an active status.
+
+    'req_vendorbox' => 1,
+    'nortelbox'      => 0,
+    'ciscobox'      => 0,
+    'packeteerbox'  => 0,
+    'foundrybox'    => 0,
+    'juniperbox'    => 0,
+    'contivitybox'  => 0,
+    'req_getconfig' => 0,
+    'getconfig'     => 0,
+    'req_usev2c'    => 0,
+    'usev2c'        => 0,
+    'req_voip'      => 0,
+    'voip'          => 0,
+    'req_framestats'=> 1,
+    'framestats'    => 0,
+    'req_namedonly' => 0,
+    'namedonly'     => 0,
+    'req_vendorint' => 0, # Try to get vendor specific proprietary information for interface stats
+    'req_extendedint' => 0, # Try to get extended mib-ii interface stats
+    'extendedint' => 0, # Try to get extended mib-ii interface stats
+    'foundryint'    => 0,
+    'req_vipstats'  => 1,
+    'vipstats'      => 0,
+    'req_vlans'     => 0,
+    'vlans'         => 0,
+    'req_modular'   => 0,  ### Create a hierarchical output for chassis based devices
+
+    ###
+    ### Informational variables
+    ###
+
+    'vendor_descr_oid' => '', ### Vendor specific OID for interface descriptions
+    'vendor_soft_ver'  => '', ### Vendor specific software version (IOS, CatOS, etc..)
+    'vendor_soft_oid'  => '', ### Vendor specific software version (IOS, CatOS, etc..)
+    'router'           => '', ### Router name taken from the command-line
+
+    ###
+    ### Non-Sticky variables. These are reset to true at each iteration of the interface loop
+    ###
+    'show_max'         => 1, ### Should the max and max_octets variable be added in the configuration
+
+    ###
+    ### SNMP MIB Collection variables
+    ###
+
+    'snmp_ver'             => '', ### SNMP string used for snmpUtil calls
+    'snmp'             => '', ### SNMP string used for snmpUtil calls
+    'sysDescr_orig'    => '', ### MIB-II sysDescr for textual output
+    'sysDescr'         => '', ### MIB-II sysDescr for web based output
+    'sysContact'       => '', ### MIB-II SNMP Contact output
+    'sysName'          => '', ### MIB-II SNMP System name output
+    'sysLocation'      => '', ### MIB-II SNMP Location output
+    'chassisPhysicalDescr' => '', ### MIB-II SNMP Chassis serial output
+
+    'thresholds'       => {}, ### Thresholds for automatic application
+    );
+
+genConfig::SNMP::register_oids(%OID);
+
+genConfig::File::set_file_header("# Generated by $script\n".
+				 "# Args: $opts{savedargs}\n".
+				 "# Date: ". scalar(localtime(time)). "\n\n");
+
+###############################################################################
+###
+### Start main processing loop
+###
+###############################################################################
+
+### Process command-line arguments
+usage() if (!defined($ARGV[0]));
+
+# Set the default logging level
+Common::Log::setLevel($opts{logLevel});
+
+while ($ARGV[0] =~ /^-/) {
+    my $arg = shift;
+
+    if ($arg eq '-b' || $arg eq '--bytes') {
+        $opts{units} = "bytes";
+    } elsif ($arg eq '-c' || $arg eq '--community') {
+        $opts{community} = shift;
+    } elsif ($arg eq '-C' || $arg eq '--addcommunity') {
+        $opts{community} = shift;
+        $opts{addcomm} = 1;
+    } elsif ($arg eq '--communityrw') {
+        $opts{communityrw} = shift;
+    } elsif ($arg eq '--ciscoint') {
+        Warn ("Replaced by --vendorint $arg");
+    } elsif ($arg eq '--vendorint') {
+        $opts{req_vendorint} = 1;
+        $opts{req_extendedint} = 1;
+        $opts{extendedint} = 1;
+    } elsif ($arg eq '-d' || $arg eq '--dontcollect') {
+        push(@DONTCOLLECT, split(/\s*,\s*/, shift));
+    } elsif ($arg eq '-e' || $arg eq '--exception') {
+        push(@EXCEPTIONS, shift);
+    } elsif ($arg eq '-f' || $arg eq '--framestats') {
+        Info('-f and --framestats : Deprecated.\n Now included by default, use --noframestats to skip');
+    } elsif ($arg eq '--noframestats') {
+        $opts{req_framestats} = 0;
+    } elsif ($arg eq '-g' || $arg eq '--getconfig') {
+        $opts{req_getconfig} = 1;
+    } elsif ($arg eq '-h' || $arg eq '--help') {
+        usage();
+    } elsif ($arg eq '-l' || $arg eq '--lowercase') {
+        $opts{lowercase} = 1;
+    } elsif ($arg eq '--namedonly') {
+        $opts{req_namedonly} = 1;
+    } elsif ($arg eq '--nodupwarn') {
+        $opts{nodupwarn} = 1;
+    } elsif ($arg eq '--vlans') {
+        $opts{req_vlans} = 1;
+    } elsif ($arg eq '-m' || $arg eq '--modular') {
+        $opts{req_modular} = 1;
+    } elsif ($arg eq '-m' || $arg eq '--monitors') {
+        $opts{monitors} = 1;
+    } elsif ($arg eq '-n' || $arg eq '--nodns') {
+        $opts{nodns} = 1;
+    } elsif ($arg eq '--nounused') {
+        Info('--nounused : Deprecated.\n Now included by default, use --showunused to show all interfaces.');
+    } elsif ($arg eq '--showunused') {
+        $opts{nounused} = 0;
+    } elsif ($arg eq '-p' || $arg eq '--ports') {
+        %collectable = portlist2array(shift);
+        $opts{collectall} = 0;
+    } elsif ($arg eq '--default') {
+        my @atmp = split/:/,shift;
+        $opts{refdefault}->{$atmp[0]} = $atmp[1];
+    } elsif ($arg eq '-i' || $arg eq '--info') {
+        my @atmp = split/:/,shift;
+        $opts{refinfo}->{$atmp[0]} = $atmp[1];
+    } elsif ($arg eq '--sortby') {
+        $opts{sortby} = shift;
+    } elsif ($arg eq '-r' || $arg eq '--rtragents') {
+        Info('-r and --rtragents : Deprecated.\n Now included by default, use --rtragents to skip SAA Agent collection.');
+    } elsif ($arg eq '--nortragents') {
+        $opts{rtragents} = 0;
+    } elsif ($arg eq '--access') {
+        $opts{accessint} = 1;
+    } elsif ($arg eq '--gigonly') {
+        $opts{gigonly} = 1;
+    } elsif ($arg eq '--core') {
+        ## Can only be used with RRDtool 1.1.x + Cricket Holt-Winter support enabled
+        ## in the config-tree and cricket.config.
+        ## This is not for the faint of heart. No support is provided for this feature.
+        ## And the provided Default config-tree does not support it. You must uncomment
+        ## the Holt-Winter section in the root default file.
+        $opts{coreint} = 1;
+    } elsif ($arg eq '--version') {
+        version();
+    } elsif ($arg eq '--loglevel') {
+        $opts{logLevel} = shift;
+    } elsif ($arg eq '--voip') {
+        $opts{req_voip} = 1;
+    } elsif  ($arg eq '-2' || $arg eq '--snmpv2c') {
+        $opts{req_usev2c} = 1;
+    } elsif  ($arg eq '--forceplugin') {
+        $opts{plugin} = shift;
+    } elsif  ($arg =~ /^-P(\w+)(=(.*))?/) {
+        push(@{$opts{pluginflags}->{$1}}, $3);
+    } else {
+        Error ("Unknown flag: $arg\n");
+        exit 1;
+    }
+}
+
+usage() if (@ARGV != 1);
+
+### Set general arguments
+
+# Set it to the optional user defined level
+Common::Log::setLevel($opts{logLevel});
+
+$opts{router} = $ARGV[0];
+snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+
+###########################################################################
+###
+### Make sure we can contact the box.
+###
+###   By retrieving it's sysObjectID.
+###   Test snmpv2c support if it was requested
+###
+###########################################################################
+
+exit if (! &contact() );
+
+
+###########################################################################
+###
+### Build the threshold mapping from the configuration file
+### if the options --monitors is used
+###
+### This is required for automatic application of monitoring thresholds
+### within the Cricket framework. It is highly suggested to use this
+### framework for threshold monitoring.
+###
+### Read the Cricket documentation for help in creating your thresholds
+### and consult the $CRICKET/lib/monitorConfig file for the format of
+###  the configuration file template.
+###
+###########################################################################
+
+
+### Create the monitor thresholds configuration
+
+%{$opts{'thresholds'}} = monitorCreation($monitorConfig) if ($opts{monitors});
+
+###########################################################################
+###
+### Collect basic MIB-II information used to identify the device type
+###
+###########################################################################
+
+
+### Get basic system info.
+
+($opts{sysDescr})     = get('sysDescr');
+($opts{sysContact})   = get('sysContact');
+($opts{sysName})      = get('sysName');
+($opts{sysLocation})  = get('sysLocation');
+
+### Cleanup the sysDescr OID value
+
+$opts{sysDescr_orig} = $opts{sysDescr};
+$opts{sysDescr_orig} =~ s/[\r\n ]+/ /g;
+$opts{sysDescr} =~ s/[\r\n]+/<BR>/g;  # Change returns to <BR>
+
+Debug ("\nMIB-II System description: $opts{sysDescr}");
+
+###########################################################################
+###
+### Vendor specific section
+###
+### Used to identify device type
+### Used to demote or promote options
+###   via local processing
+###   via external plugin
+###
+###########################################################################
+
+### Vendor specific OID for interface descriptions
+# uses $opts{vendor_descr_oid};
+
+### Vendor specific software version (IOS, CatOS, etc..)
+# uses $opts{vendor_soft_ver};
+
+### External plugins for device discovery
+
+my @plugins = genConfig::pluginUtils::find_plugin($gInstallRoot, \%opts);
+my $plugin;
+
+if (!@plugins) {
+    Info ("No plugin found for $opts{sysDescr} using builtin functions.");
+} elsif (@plugins > 1) {
+    Die("Multiple plugins found.  ",
+	  "Use the --plugin flag to choose one of the following:\n",
+	  "     ", join("\n     ", @plugins), "\n");
+} else {
+    Info ("Found a plugin for $opts{sysDescr} using custom functions.");
+    $plugin = $plugins[0];
+    $plugin->discover(\%opts);
+}
+
+### CISCO PIX FIREWALL SECTION
+###
+if ($opts{sysDescr} =~ /Cisco PIX Firewall Version 6\.[23]/) {
+    $opts{model} = 'PIX-62+';
+    $opts{pixfirewallconnections} = 1;
+    $opts{class} = 'pix';
+}elsif ($opts{sysDescr} =~ /PIX Firewall/) {
+    $opts{model} = 'PIX';
+    $opts{pixfirewallconnections} = 1;
+    $opts{class} = 'pix';
+}
+
+### CISCO ALTIGA VPN SECTION
+###
+if ($opts{sysDescr} =~ /VPN 3000/) {
+    $opts{model} = 'Altiga';
+    $opts{vpntunnels} = 1;
+    $opts{class} = 'altiga';
+}
+
+### CISCO Aironet-AP && Aironet-Bridge SECTION
+###
+if ($opts{sysObjectID} eq 'enterprises.9.1.379' ||
+    $opts{sysObjectID} eq 'enterprises.9.1.380' ||
+    $opts{sysObjectID} eq 'enterprises.9.1.474' ||
+    $opts{sysObjectID} eq 'enterprises.9.1.507') {
+
+    $opts{model} = 'Aironet-AP';
+
+    # If this is a wireless accespoint based on VxWorks
+    $opts{wirelessAssociations} = 1;
+    $opts{class} = 'cisco';
+}
+
+if ($opts{sysObjectID} eq 'enterprises.9.1.525' ||
+    $opts{sysObjectID} eq 'enterprises.9.1.533' ||
+    $opts{sysObjectID} eq 'enterprises.9.1.552') {
+
+    # This is an IOS Access point which is currently
+    # not supported.
+    $opts{wirelessAssociations} = 0;
+    $opts{model} = 'Aironet-AP';
+    $opts{class} = 'cisco';
+}
+
+### CONTIVITY GENERIC SECTION
+### Uses standard MIB 2 but does not ignore tunnel interfaces
+###
+if ($opts{sysDescr} =~ /^CES\s/) {
+
+    $opts{model} = 'Contivity-Generic';
+    $opts{contivitybox} = 1    if ($opts{req_vendorbox});
+    $opts{class} = 'nortel';
+}
+
+### PACKETEER GENERIC SECTION
+### Get CAR statistics for filtering
+###
+if ($opts{sysDescr} =~ /Packeteer/){
+    $opts{model} = 'Packeteer';
+    $opts{Packeteer} = 1;
+    $opts{class} = 'packeteer';
+}
+
+
+###########################################################################
+###
+### Global exceptions section
+###
+### Used to set exceptions to the DONTCOLLECT LIST
+### For example: Type 53 includes vlans and other virtual interfaces.
+###              if this type is put in the DONTCOLLECT list, none of those
+###              types will be collected. What if we want just one of those
+###              virtual interfaces, we can add the name of the interface to
+###              the EXCEPTIONS list which is exactly what we do here.
+###
+###########################################################################
+
+### VLAN Collection
+if ($opts{req_vlans}) {
+    $opts{vlans} = 1;
+    push (@EXCEPTIONS, 'VLAN');
+}
+
+### ...
+
+###########################################################################
+
+# Before setting up the default file, we figure out the type of chassis
+# as well as validate if the box truly supports SNMP Version 2c counters
+# as some IOS switches will lie as to their ability to use the 64 bit counters.
+# This is where we beat the system by hardcoding bypass values for 2c counters
+# if it is known that this type of equipement doesn't support them correctly.
+# Unknown router types are DISABLED from using v2c to avoid nasty surprises.
+#
+# chassisname        = The name of the chassis target for a device
+#                      It will also serve as an identifier
+#                      to set thresholds for the chassis
+# chassisttype       = The name of the targetType that will be used
+#                      in the config-tree and
+#                      to figure out what datasources to collect
+#                      from the device
+# chassisinst        = The name of the function used to map the inst number
+#                      of the OID used for collecting chassis statistics.
+#
+#               Note that the ttype for all other things(interface, agents, wireless, etc)
+#               will have datasources *and* thresholds applied based on the ttype.
+
+if ($opts{chassisstats}) {
+    Info("Current model: $opts{model}");
+    ### Figure out what kind of model we're talking to and create a target
+    ### to report chassis stats, fix any special funkyness for some models.
+
+    if ($opts{chassisttype} && $opts{model}) {
+        # Already processed by a plugin.
+        # Skip this logical loop.
+    } elsif ($opts{model} =~ /Packeteer/) {
+        $opts{chassisttype} = 'Generic-Device';
+        $opts{chassisname} = 'Chassis-Packeteer';
+        $opts{collect} = 0;
+    } elsif ($opts{model} =~ /^PIX$/) {
+        $opts{chassisttype} = 'Cisco-PIX-Firewall-No-CPU';
+        $opts{chassisname} = 'Chassis-PIX';
+    } elsif ($opts{model} =~ /^PIX-62+/) {
+        $opts{chassisttype} = 'Cisco-PIX-Firewall';
+        $opts{chassisname} = 'Chassis-PIX';
+        $opts{chassisinst} = 'map(cpu-stats)';
+    } elsif ($opts{model} =~ /Altiga/) {
+        $opts{chassisttype} = 'Cisco-vpn3000';
+        $opts{chassisname} = 'Chassis-Altiga';
+    } elsif ($opts{model} =~ /Aironet-AP/) {
+        $opts{chassisttype} = 'Cisco-Aironet';
+        $opts{chassisname} = 'Chassis-Generic';
+        $opts{collect} = 0;
+    } else {
+        $opts{chassisttype} = 'Generic-Device';
+        $opts{chassisname} = 'Chassis-Generic';
+        $opts{collect} = 0;
+        $opts{usev2c} = 1 if ($opts{req_usev2c});
+    }
+
+    # Reset snmp collection engine version based on the user defined
+    # rules based on model type.
+    if (!$opts{usev2c}) {
+	    $opts{snmp_ver} = '1';
+	    snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+    }
+
+    Info ("Model: $opts{model}");
+    Info ("Type: $opts{chassisttype}");
+
+}
+
+
+###########################################################################
+###
+### Collect information from the MIB-2 and other specific MIBS
+###
+###########################################################################
+
+
+### Get vendor specific interface descriptions
+
+my (%intdescr);
+if ($opts{vendor_descr_oid} ne '') {
+    %intdescr = gettable($opts{vendor_descr_oid});
+} else {
+    ### Probably a generic device,
+    ### see if it supports something useful like the MIB-II ifAlias
+
+    my (@intdescr_test) = gettable('ifAlias');
+    if (scalar(@intdescr_test)/2 != 0) {
+        %intdescr = @intdescr_test;
+    } else {
+        my (@intdescr_test) = gettable('ifName');
+        %intdescr = @intdescr_test;
+    }
+}
+
+### Get interface info.
+
+my %ifdescr         = gettable('ifDescr');
+my %iftype          = gettable('ifType');
+my %ifmtu           = gettable('ifMtu');
+my %ifspeed         = gettable('ifSpeed');
+my %ifadminstatus   = gettable('ifAdminStatus');
+my %ifoperstatus    = gettable('ifOperStatus');
+
+
+### Get address to interface mapping info.
+
+my %ipadentaddr     = gettable('ipAdEntAddr');
+my %ipadentif       = gettable('ipAdEntIfIndex');
+
+### Walk ifHCInOctets if we're going to use SNMP version 2c.  We'll use
+### this later to verify that high capacity counters are available for
+### each interface.
+
+my %ifHCInOctets;
+if ($opts{usev2c}) {
+    snmp_def($opts{router}, $opts{community}, '2c');
+    %ifHCInOctets    = gettable('ifHCInOctets');
+    # Reset to default snmp v1
+    snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+}
+
+### Get vendor specific Port/Slot Mapping
+
+# Global Mapping Hash
+my %slotPortMapping;
+my %slotPortList;
+my %slotNameList;
+my %slotList;
+
+### Statistics from Packeteer
+### Traffic shaping counters based on CAR
+
+my %classFullName;
+my %partitionMinimumBps;
+if ($opts{Packeteer}) {
+    %classFullName = gettable('classFullName');
+    %partitionMinimumBps = gettable('partitionMinimumBps');
+}
+
+### MIB-II Switch traffic statistics
+
+my $ipForwDatagrams = get('ipForwDatagrams');
+
+###########################################################################
+###
+### Creating the destination target file
+### Start adding information for the target starting with
+###
+### --default--       section
+### Chassis target    section
+### Custom targets    section
+### Interface targets section
+###
+###########################################################################
+
+### Create the target directory and targets file
+
+$opts{rdir} = subdir($opts{router}, $opts{lowercase});
+
+$file = $opts{file} = new genConfig::File("$opts{rdir}/targets", $opts{'thresholds'});
+
+### Print the header information
+
+$file->write(<<EOD);
+#######################################################################
+# Description: $opts{sysDescr_orig}
+#     Contact: $opts{sysContact}
+# System Name: $opts{sysName}
+#    Location: $opts{sysLocation}
+#######################################################################
+
+EOD
+
+Info ("Building Name to IP Adress Translation   ");
+
+# get numeric IP
+my $hbn;
+my $ip = "can't resolve '$opts{'router'}'";
+if (!$opts{'nodns'}) {
+    $hbn = gethostbyname($opts{'router'});
+} else {
+    $ip = $opts{'router'};
+}
+
+if($hbn) {
+    $ip = inet_ntoa($hbn->addr) || "can't resolve '$opts{'router'}'";
+}
+
+Info ("......................... [DONE]");
+
+### Set up the defaults.
+
+
+### These options are used in the context of user defined variables
+### added from the command-line directly to the --defaults-- section
+### of the target.
+
+my (@options);
+if ($opts{refdefault}) {
+    foreach my $key (keys %{ $opts{refdefault} } ){
+        push (@options, $key, $opts{refdefault}->{$key});
+    }
+}
+
+
+$file->writetarget('--default--', '',
+        'router'         => $opts{router},
+        'directory-desc' => $opts{sysLocation},
+        'short-desc'     => '',
+        'long-desc'      => '%short-desc%',
+        'display-name'   => '%router%  %interface-name%',
+        'ip'             => $ip,
+        'interface-name' => '',
+        'inst'           => 'map(interface-name)',
+        ($opts{addcomm}) ? ('snmp-community' => $opts{community})
+                   : (),
+        'target-type'    => 'standard-interface',
+        @options,
+        );
+
+
+### Write the configuration for the chassis
+
+if ($opts{chassisstats}) {
+
+    # Use the pre-identfied router type
+
+    my ($ldesc, $sdesc);
+    my ($inst) = 0;
+ 
+    $ldesc = ($opts{chassisPhysicalDescr}) ? ( "$opts{chassisPhysicalDescr}<BR>$opts{sysDescr}" )
+                            : ( $opts{sysDescr} );
+    $sdesc = "$opts{model} class chassis";
+
+    $inst = $opts{chassisinst} if ($opts{chassisinst});
+
+    ### These options are used in the context of user defined variables
+    ### added from the command-line directly to the chassis section
+    ### of the target.
+
+    my (@options);
+    if ($opts{refinfo}) {
+        foreach my $key (keys %{ $opts{refinfo} } ){
+            push (@options, $key, $opts{refinfo}->{$key});
+        }
+    }
+
+    push (@options, 'snmp-community-rw', $opts{communityrw})  if ($opts{communityrw});
+    push (@options, 'sortby', $opts{sortby}) if ($opts{sortby});
+    push (@options, 'collect', 'false') if (!$opts{collect});
+    push (@options, 'class', $opts{class}) if ($opts{class});
+
+    # Write the data to the file
+
+    $file->writetarget($opts{chassisname}, '',
+        'inst'        => $inst,
+        'order'       => $opts{order},
+        'long-desc'   => $ldesc,
+        'short-desc'  => $sdesc,
+        'target-type' => $opts{chassisttype},
+        @options,
+        );
+
+    $opts{order} -= 1;
+}
+
+
+###
+### Building Custom Non-Interface Statistics
+###
+
+Info ("Building Custom Non-Interface Statistics ");
+
+### Build MIB-2 Switch traffic statistics
+
+if ($ipForwDatagrams && $ipForwDatagrams != 0) {
+
+    my ($ldesc, $sdesc);
+    $ldesc = "Switch fabric statistics - Packets per Second";
+    $sdesc = "Switch fabric statistics - Packets per Second";
+    my ($targetname) = 'device-traffic';
+
+    $file->writetarget($targetname, '',
+        'inst'            => '',
+        'order'           => $opts{order},
+        'interface-name'  => $targetname,
+        'long-desc'   => $ldesc,
+        'short-desc'  => $sdesc,
+        'target-type' => 'Device-Traffic',
+    );
+
+    $opts{order} -= 1;
+}
+
+if ($plugin) {
+    my %data = (
+                'ifspeed'    => \%ifspeed,
+                'ifdescr'    => \%ifdescr,
+                'intdescr'   => \%intdescr,
+                'iftype'     => \%iftype,
+                'ifmtu'      => \%ifmtu,
+                'slotPortMapping'   => \%slotPortMapping,
+                'slotPortList'      => \%slotPortList,
+                'slotNameList'      => \%slotNameList,
+                'slotList'          => \%slotList
+    );
+
+    $plugin->custom_targets(\%data,\%opts);
+ 
+    %ifspeed    = %{$data{ifspeed}};
+    %ifdescr    = %{$data{ifdescr}};
+    %intdescr   = %{$data{intdescr}};
+    %iftype     = %{$data{iftype}};
+    %ifmtu      = %{$data{ifmtu}};
+    %slotPortMapping   = %{$data{slotPortMapping}};
+    %slotPortList      = %{$data{slotPortList}};
+    %slotNameList      = %{$data{slotNameList}};
+    %slotList          = %{$data{slotList}}
+}
+
+### Build Altiga VPN statistics
+
+if ($opts{vpntunnels}) {
+
+    my ($ldesc, $sdesc);
+    $ldesc = "VPN tunnel statistics for L2TP/IPSec/Management tunnels types and active vs total sessions.";
+    $sdesc = "VPN tunnel statistics for L2TP/IPSec/Management tunnels types and active vs total sessions.";
+    my ($targetname) = 'vpn_statistics';
+
+    $file->writetarget($targetname, '',
+        'inst'           => '0',
+        'order'          => $opts{order},
+        'interface-name'   => $targetname,
+        'long-desc'   => $ldesc,
+        'short-desc'  => $sdesc,
+        'target-type' => 'Cisco-vpn-tunnels'
+    );
+
+    $opts{order} -= 1;
+}
+
+### Build Cisco PIX connection statistics
+
+if ($opts{pixfirewallconnections}) {
+
+    my ($ldesc, $sdesc);
+    $ldesc = "Number of connections currently in use by the entire firewall";
+    $sdesc = "Number of connections currently in use by the entire firewall";
+    my ($targetname) = 'firewall_statistics';
+
+    $file->writetarget($targetname, '',
+        'inst'           => '0',
+        'order'          => $opts{order},
+        'interface-name'   => $targetname,
+        'long-desc'   => $ldesc,
+        'short-desc'  => $sdesc,
+        'target-type' => 'Cisco-pix-stats',
+    );
+
+    $opts{order} -= 1;
+}
+
+### Build Aironet wireless Access associations
+
+if ($opts{wirelessAssociations}) {
+
+    my ($ldesc, $sdesc);
+    $ldesc = "Wireless client + bridge associations and totals.";
+    $sdesc = "Wireless client + bridge associations and totals.";
+    my ($targetname) = 'wireless_associations';
+
+    $file->writetarget($targetname, '',
+        'inst'           => '0',
+        'order'         =>      $opts{order},
+        'interface-name'   => $targetname,
+        'long-desc'   => $ldesc,
+        'short-desc'  => $sdesc,
+        'target-type' => 'Cisco-Aironet-Associations',
+    );
+
+    $opts{order} -= 1;
+}
+
+### Build Packeteer class statistics
+
+if ($opts{Packeteer} && keys(%classFullName)) {
+    my $index;
+    my $speed_str;
+    foreach $index (sort { $a <=> $b } keys(%classFullName)) {
+        if (defined $partitionMinimumBps{$index}) {
+                my $b = ($opts{units} eq "bytes") ? 8 : 1;
+                my $speed = int($partitionMinimumBps{$index} / $b); # bits to bytes
+                $speed_str = ($speed) ? fmi($speed, $opts{units}) : '';
+        } else {
+                $speed_str = "nil";
+        }
+        my $name = "$opts{router}.$index";
+        my $target = $classFullName{$index};
+        ### If we already have _ in the name, replace them with -, other wies it will stuff up the split function below.
+        $target =~ s/\_/\-/g;
+
+        ### Drop the leading /, and replace / : or space with _
+        $target =~ s/^\///;
+        $target =~ s/[\/\s:]/\_/g;
+        my $ldesc = ((defined $classFullName{$index}) ? $classFullName{$index} : '');
+        $ldesc .= "<BR>$name" if ($name);
+
+        my $sdesc;
+        if ($speed_str eq "nil") {
+                $sdesc = "";
+        }else{
+                $ldesc .= "<BR>$speed_str";
+                $sdesc = "$speed_str";
+        }
+
+        $file->writetarget($target, '',
+                ('interface-name' => $classFullName{$index},
+                'display-name' => '%interface-name%',
+                'target-type'  => 'packeteer-class',
+                'short-desc'     => $sdesc,
+                'long-desc'      => $ldesc,
+                'order'          => $opts{order},
+                'inst'           => $index
+                ) );
+
+    $opts{order} -= 1;
+    }
+}
+
+
+
+### Build an IP address/hostname to interface instance map.
+
+my($index, %ipaddr, %iphost);
+
+foreach $index (keys %ipadentaddr) {
+    $ipaddr{$ipadentif{$index}} = $ipadentaddr{$index};
+    if ( ! $opts{nodns} ) {
+        $iphost{$ipadentif{$index}} = gethostbyaddr(pack('C4',split(/\./,
+                                      $ipaddr{$ipadentif{$index}})), AF_INET) || '';
+
+        # Treat condition where gethostbyaddr(Net:hostent overriden) 
+        # returns a pointer to an array!
+        $iphost{$ipadentif{$index}} = $iphost{$ipadentif{$index}}->name if($iphost{$ipadentif{$index}} && $iphost{$ipadentif{$index}} =~ /ARRAY/);
+        Debug("index: $index ipadentif: $ipadentif{$index} data: ", $iphost{$ipadentif{$index}});
+    }
+    else {
+        $iphost{$ipadentif{$index}} = '(no hostname)';
+    }
+            
+    if (!defined $iphost{$ipadentif{$index}} ||
+       ($iphost{$ipadentif{$index}} eq '')){
+        $iphost{$ipadentif{$index}} = '(no hostname)';
+    }
+}
+
+Info ("......................... [DONE]");
+
+###
+### Finished Custom Non-Interface Statistics
+###
+
+
+### Do some preprocessing on the interface list.
+
+Info ("Processing Pre-Process of interface list ");
+my %unique;
+my $unique = 1;
+my %collect;
+
+foreach $index (keys %ifdescr) {
+
+    if ($opts{ciscobox} && defined $opts{vendor_soft_ver}
+    && ($opts{vendor_soft_ver} lt "11.1" && $iftype{$index} == '32')
+    && !defined $intdescr{$index}) {
+
+        ###  This is a frame-relay sub-interface *and* the router
+        ###  is running an IOS older than 11.1. Therefore, we can
+        ###  get neither ifAlias nor ciscoLocIfDesc. Do something
+        ###  useful.
+
+        $intdescr{$index} = "Cisco PVCs descriptions require IOS 11.1+.";
+    }
+
+    ## Slot/Port Collection Mapping. If a slot/port is in the user defined
+    ## %collectable hash then enable it in the %collect hash. If it is not defined
+    ## In the %collectable hash, then disable it in the %collect hash. The %collect
+    ## hash is only a mapping between the %collectable hash and the %ifIndex global
+    ## interfaces reference table.
+
+    if ( !$opts{collectall} ) {
+        if (defined $slotPortMapping{$index}) {
+        $collect{$index} = 1 if $collectable{$slotPortMapping{$index}};
+        } else {
+            $collect{$index} = 0;
+        }
+    }
+
+    ### Figure out whether the interface description is unique or not.
+    ### (if not, we'll add explicit inst numbers later...)
+
+    if (defined $unique{$ifdescr{$index}}) {
+        $unique{$ifdescr{$index}} = 0;
+        $unique = 0;
+    } else {
+        $unique{$ifdescr{$index}} = 1;
+    }
+}
+
+Info ("......................... [DONE]");
+
+
+if (!$unique) {
+    $file->write(<<EOD);
+######################################################################
+# WARNING: Duplicate interface descriptions have forced the use of
+#          hard coded instance (_In) numbers for some interfaces.
+######################################################################
+EOD
+
+    $file->write(<<EOD) if (!$opts{nodupwarn});
+html    footnotes
+    <TABLE>
+    <TR>
+        <TD VALIGN=TOP><FONT COLOR=RED>Warning: </FONT></TD>
+        <TD>Duplicate interface descriptions have forced the use of
+        hard coded instance numbers for interfaces marked with
+        <FONT COLOR=RED>*</FONT>. Config file should be regenerated
+        after any hardware or interface config changes.</TD>
+        </TR>
+    </TABLE>
+EOD
+}
+
+
+### Write out the interface targets.
+
+Info ("Processing Interface list                ");
+
+my $order = 899; # Default Starting order (Max of 899 interfaces)
+if ($opts{req_modular}) {
+    $slotList{chassis} = $file;
+    foreach my $slot (sort keys %slotList) {
+        Debug("\$slot = $slot");
+        Debug("\$opts{router} = $opts{router}");
+        Debug("\$slotNameList{$slot} = $slotNameList{$slot}");
+        my $_dir  = subdir("$opts{router}/$slotNameList{$slot}", $opts{lowercase});
+        my $_file = new genConfig::File("$_dir/ports", $opts{'thresholds'});
+        $slotList{$slot} = $_file;
+    }
+}
+
+foreach $index ( sort { $a <=> $b } keys %ifdescr) {
+    my $sdesc = '';
+    my $ldesc = '';
+    my $name = '';
+    my $c = '';
+    my $dlci = undef;
+    my @config = ();
+    my $hc = '';
+    my $class = '';
+    my $match = 0;
+    my $wmatch = 0;
+    my $customsdesc = '';
+    my $customldesc = '';
+    my $customfile = '';
+
+    if ($opts{req_modular}) {
+        Debug("\$index = $index");
+        Debug("\$ifdescr{$index} = $ifdescr{$index}");
+        Debug("\$slotPortList{$ifdescr{$index}} = $slotPortList{$ifdescr{$index}}");
+        Debug("\$slotList{$slotPortList{$ifdescr{$index}}} = $slotList{$slotPortList{$ifdescr{$index}}}");
+        my $_file = $slotList{$slotPortList{$ifdescr{$index}}};
+        if ($_file) {
+          $file = $_file;
+        } else {
+          $file = $slotList{chassis};
+        }
+    }
+    
+    ### Set the snmpv2c identifier for interfaces that support HC counters
+    ### Support is defined as:
+    ###  - Global snmpv2c $opts{usev2c} variable is non-zero
+    ###  - A defined value in the HC hash
+    ###  - A non-zero value for the interface in the hash
+    ###  - An interface speed that requires HC counters (> 100Mbits)
+    ### If all conditions are met the interface targetType will include
+    ### a '-hc' identifier, which will also cause the snmp-version to be set
+    ### to '2c' for that interface.
+
+
+    $hc = '-hc' if ($opts{usev2c} && defined $ifHCInOctets{$index} && $ifHCInOctets{$index} != 0 && (int($ifspeed{$index}) > 100000000));
+
+    # Push in the configuration for the interface the snmp-version required
+    # to query HC 64bit snmp counters. Only if all the conditions are met.
+    Debug ("Conditions met for HC counters applying -hc\n") if ($hc eq '-hc');
+
+
+    push(@config, 'snmp-version' => '2c') if ($hc eq '-hc');
+
+    # Set the interface classification type
+    # For each type that is defined a matching targetType must be defined
+    # in the config-tree, or else Cricket will be confused as to what
+    # to do with a new targetType. (DS's to collect, view definition)
+
+    $class = '-core' if ($opts{coreint} && $iftype{$index} != 22);
+    $class = '-access' if ($opts{accessint});
+
+    ### Get the target name and interface speed.
+
+    my($target) = $ifdescr{$index};
+    $target =~ s/[\/\s:]/\_/g;
+    $target =~ s/\,/_/g;
+    my $b = ($opts{units} eq "bytes") ? 8 : 1;
+
+    ###
+    ### Add slot/port mapping if present and only if it is required by
+    ### the device. This would mean it has a special inst mapping
+    ### based on the slot/port mapping instance definition
+    ###
+
+    if (defined $slotPortMapping{$index} && $opts{inst}) {
+        my ($slot, $port) = split (/\//,$slotPortMapping{$index});
+        push(@config, 'module-number' => $slot,
+                      'port-number'   => $port,
+                      'inst'          => $opts{inst});
+    }
+
+    ###
+    ### Do special collection on certain interface types.
+    ###
+
+
+    if ($iftype{$index} == 49 ) {      # aal5 ATM sub-interface
+
+        ### If it is an ATM aal5 interface, only collect in & out stats
+
+        push(@config, 'target-type' => 'sub-interface' . $hc);
+        $match = 1;
+
+    }  elsif ($iftype{$index} == 53 ) {      # Ethernet ISL sub-interface
+
+        ### If it is a sub-interface, only collect in & out stats
+
+        push(@config, 'target-type' => 'sub-interface' . $hc);
+        $match = 1;
+
+    } elsif ($opts{contivitybox} && $iftype{$index} == 131) {
+
+        ### Contivity IPSec tunnel - change target name and set speed to no zero value
+
+        push(@config, 'target-type' => 'standard-interface' . $class . $hc);
+
+        my %contivity;
+        my $src;
+        my $dest;
+        my $tunnel_type;
+
+        ### split ifDescr into relevant parts
+        chop $target;
+        $target =~ s/\=/\,/g;
+        %contivity = split(/,/,$target);
+        $src = $contivity{'LE'};
+        $dest = $contivity{'RE'};
+        $ipaddr{$index} = "IPSEC Tunnel<BR>Source = $src to Destination =  $dest";
+        $src =~ s/\./\_/g;
+        $dest =~ s/\./\_/g;
+        $target = "IPSEC-$src-$dest";
+
+        ### set nominal speed of tunnel to ensure the tunnel is graphed
+        # Contivities may not report speed correctly on tunnel interfaces
+        # This is a fudge but it works for me.  
+        # Could put logic in here to put this to interface speed?
+        # Note from Francois: Where to get the ifspeed, physical interface?!..
+
+        if ( $ifspeed{$index} == 0 ) {
+            $ifspeed{$index} = 1920000;
+        }
+        $match = 1;
+
+    }  elsif (($iftype{$index} == 135)  &&
+              !$opts{juniperbox}) {      # Ethernet 802.1Q sub-interface
+
+        ### If it is a sub-interface, only collect in & out stats
+
+        push(@config, 'target-type' => 'sub-interface' . $hc);
+        $match = 1;
+
+    }  elsif ($plugin) {
+
+        Info ("Found a plugin for index $index using custom interface functions.");
+        my %data = (
+                    'ifspeed'  => \%ifspeed,
+                    'ifdescr'  => \%ifdescr,
+                    'intdescr' => \%intdescr,
+                    'iftype'   => \%iftype,
+                    'ifmtu'    => \%ifmtu,
+                    'ifoperstatus'    => \%ifoperstatus,
+                    'ifadminstatus'   => \%ifadminstatus,
+                    'slotPortMapping' => \%slotPortMapping,
+                    'config'   => \@config,
+                    'hc'       => $hc,
+                    'class'    => $class,
+                    'match'    => $match,
+                    'sdesc'    => $sdesc,
+                    'ldesc'    => $ldesc,
+                    'customsdesc' => $customsdesc,
+                    'customldesc' => $customldesc,
+                    'customfile'  => $customfile,
+                    );
+
+        $plugin->custom_interfaces($index, \%data, \%opts);
+
+        # Get the data back from the data hash, which was stored in the plugin.
+        %ifspeed    = %{$data{ifspeed}};
+        %ifdescr    = %{$data{ifdescr}};
+        %intdescr   = %{$data{intdescr}};
+        %iftype     = %{$data{iftype}};
+        %ifmtu      = %{$data{ifmtu}};
+        %ifoperstatus      = %{$data{ifoperstatus}},
+        %ifadminstatus     = %{$data{ifadminstatus}},
+        %slotPortMapping   = %{$data{slotPortMapping}};
+        @config     = @{$data{config}};
+        $hc         = $data{hc};
+        $class      = $data{class};
+        $match      = $data{match};
+        $sdesc      = $data{sdesc};
+        $ldesc      = $data{ldesc};
+        $customsdesc = $data{customsdesc};
+        $customldesc = $data{customldesc};
+        $customfile = $data{customfile};
+    }
+
+    my $speed = int($ifspeed{$index} / $b); # bits to bytes
+    my $speed_str = ($speed) ? fmi($speed, $opts{units}) : '';
+
+    if (!$match) {
+
+        # If there is no special interface match
+        # include the default type of standard-interface for each target
+	# unless extended mib-ii are supported.
+
+        if($opts{extendedint}) {
+	     push(@config, 'target-type' => 'extended-interface' . $class . $hc);
+	} else {
+             push(@config, 'target-type' => 'standard-interface' . $class . $hc);
+	}
+    }
+
+
+    ### Deal with non-unique interface descriptions by hard coding the
+    ### instance number.  Append the numeric interface type to
+    ### the target name to make it unique. Or hard coding the instance
+    ### number.
+
+    if (!$unique{$ifdescr{$index}}) {
+        $target .= "_I$index";
+        $ifdescr{$index} .= " I$index";
+
+        push(@config, 'inst' => $index);
+
+        push(@config,
+             'display-name' => "$ifdescr{$index} <FONT COLOR=RED>*</FONT>"
+             ) if (!$opts{nodupwarn});
+        push(@config,
+             'inst'         => $index);
+    }
+
+    ### Build the interface target description strings and add them in the config.
+
+    $name = (defined $iphost{$index}) ? $iphost{$index} : '';
+    $ldesc = ((defined $intdescr{$index}) ? $intdescr{$index} : '');
+    $ldesc .= "<BR>$name" if ($name);
+    $ldesc .= "<BR>" . ((defined $ipaddr{$index}) ? $ipaddr{$index} : '');
+    $ldesc .= "<BR>$speed_str $ifType_d{$iftype{$index}}";
+    $ldesc .= "<BR>DLCI = $dlci" if (defined $dlci);
+    $ldesc .= $customldesc if ($customldesc);
+
+    if (defined $intdescr{$index}) {
+        $sdesc .= "<BR>Description: $intdescr{$index}";
+    } elsif ($ipaddr{$index}) {
+        $sdesc .= "<BR>IP: $ipaddr{$index}";
+    } else {
+        $sdesc .= "<BR>Description: None defined";
+    }
+    $sdesc .= $customsdesc if ($customsdesc);
+    $sdesc .= "<BR>$speed_str $ifType_d{$iftype{$index}}";
+
+    
+    push(@config,
+        'interface-name' => $ifdescr{$index},
+        'short-desc'     => $sdesc,
+        'long-desc'      => $ldesc,
+        'order'      => $order,
+     );
+
+    ### Decreasing order of indexes
+    $order -= 1;
+
+    ### Do special processing for adding the rrd-max value
+
+    my $max = (int($ifspeed{$index}) eq 0) ? '' : int($ifspeed{$index});
+    my $maxoctets  = defined(int($ifspeed{$index})) ? int($ifspeed{$index}/8) : '';
+
+    if ($opts{show_max} == 1) {
+	push(@config,
+        'rrd-max'             => $max,
+        'rrd-max-octets'      => $maxoctets,
+	);
+    }
+    ### Always reset the show_max variable to true. If an interface
+    ### Does not need it, disable it in the module that requires it at each iteration.
+    $opts{show_max} = 1; 
+
+
+    ### Generate a comment containing the interface index and type.
+    ### This info is useful for debugging.
+
+    my $header = "### Interface $index: $ifType_d{$iftype{$index}} ($iftype{$index})";
+
+    ### See if we need to comment this interface out for various reasons...
+    Debug ("$header ");
+    Debug ("desc: $intdescr{$index} ") if defined $intdescr{$index};
+
+    if (!$opts{collectall} && !$collect{$index}) {
+        $header .= "\n### - Commented out by an administrator.\n";
+        $c="# ";
+        Debug (" Admin Commented Out");
+    } elsif ($ifoperstatus{$index} == 3 || $ifadminstatus{$index} != 1) {
+        $header .= "\n### - Administratively down or in test mode.\n";
+        $c="# ";
+        Debug (" Ifdown");
+    } elsif (!$opts{voip} && ($iftype{$index} == 103 || $iftype{$index} == 104)) {
+        $header .= "\n### - Use '--voip' to enable stats.\n";
+        $c="# ";
+        Debug (" Voip & No --voip");
+    } elsif ($speed == 0 &&
+         !($iftype{$index} == 103 || $iftype{$index} == 104 ) && !$opts{nortelbox}) {
+        $header .= "\n### - Has an insane speed.\n";
+        $c="# ";
+        Debug (" Insane Speed");
+    } elsif ($speed == 0  && !($iftype{$index} == 103 || $iftype{$index} == 104)) {
+        $header .= "\n### - Speed of 0\n";
+        $c="# ";
+        Debug (" speed: 0");
+    } elsif ((!defined($ifmtu{$index}) || $ifmtu{$index} == 0) && !($iftype{$index} == 103 || $iftype{$index} == 104)) {
+        $header .= "\n### - Has an insane MTU.\n";
+        $c="# ";
+        Debug (" speed: $speed_str mtu: Insane");
+    } elsif (!$opts{vlans} && ($iftype{$index} == 6 || $iftype{$index} == 53 || $iftype{$index} == 135)  && $ifdescr{$index} =~ /^VLAN/i) {
+        $header .= "\n### - No VLAN collection, use --vlans should you want them.\n";
+        $c="# ";
+        Debug (" VLANs not collected");
+    } elsif ($ifdescr{$index} =~ /^CPU/i) {
+        $header .= "\n### - No CPU collection\n";
+        $c="# ";
+        Debug (" CPUs not collected");
+    } elsif (grep(/^$iftype{$index}$/,@DONTCOLLECT) && !override($index)) {
+        $header .= "\n### - InterfaceType that is not collected.\n";
+        $c="# ";
+        Debug (" speed: $speed_str mtu: $ifmtu{$index} DONTCOLLECT");
+    } elsif ($opts{namedonly} &&
+         (!defined $intdescr{$index} || $intdescr{$index} eq "")) {
+        $header .= "\n#### - Has no name and --namedonly specified.\n";
+        $c="# ";
+        Debug (" speed: $speed_str mtu: $ifmtu{$index} Unnamed Rejected, & --namedonly");
+    } elsif ($opts{ciscobox} && $ifdescr{$index} =~ /ATM[\d\/]+\.??0\-aal5\slayer/ && $iftype{$index} == '49'
+       || $ifdescr{$index} =~ /Virtual-(Access|Template)|ATM[\d\/]+-(interleave)|Bearer Channel/) {
+       $header .= "\n#### - Interface either has no valid SNMP counters or is dynamic.\n";
+$c="# ";
+        Debug (" Invalid or dynamic interface");
+    } elsif ($opts{logLevel} eq 'debug') {
+        Debug (($iftype{$index} == '103' or $iftype{$index} == '104') ? " OK" : " speed: $speed_str mtu: $ifmtu{$index} OK");
+    }
+
+    ### Skip all targets that are not used. To show all interfaces
+    ### use the --showunused option in calling the script.
+
+    next if ($opts{nounused} && $c ne '');
+
+    ###
+    ### Write the target interface to the configuration file
+    ###
+    ### If we set the dial peer ID earlier (--voip), then write this
+    ### config to the dial peer target file.
+    ### Otherwise, put it in the normal target file.
+    ### Monitoring thresholds are applied within writetarget
+
+    if ($plugin) {
+        my %data = (
+                'customfile'    => \$customfile,
+                'file'          => \$file,
+                'c'             => \$c,
+                'target'        => \$target,
+                'config'        => \@config,
+                'wmatch'        => \$wmatch,
+                );
+        $plugin->custom_files(\%data, \%opts); 
+        # $wmatch returned by reference in data hash reference
+    }
+
+    if (!$wmatch) {
+        Debug "Target: $target";
+        Debug "Commented-out: $c";
+        Debug "Config: @config";
+        $file->write("#\n");
+        $file->writetarget($target, $c, @config);
+    }
+}
+Info ("......................... [DONE]");
+
+if ($opts{req_modular}) {
+    for (keys %slotList) {
+        $slotList{$_}->close();
+    }
+} else {
+    $file->close();
+}
+
+exit;
+
+###########################################################################
+#
+# Figure out if a network device supports SNMPv2c, or SNMPv1
+#
+###########################################################################
+
+sub contact {
+
+    my($sysObjectID) = get('sysObjectID');
+
+    # In case of failure, check to see if it was an snmpv2c feature request 
+    # causing the trouble and re-query
+    if ((!defined $sysObjectID) && ($opts{snmp_ver} ne '1')) {
+        Warn ("WARNING: Device does not seem to support snmpv2c, switching to v1 and re-trying.");
+	    $opts{snmp_ver} = '1';
+	    snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+        ($sysObjectID) = get('sysObjectID');
+    } elsif (!defined $sysObjectID) {
+        Warn ("WARNING: Device does not seem to support snmpv1 correctly, try running genRtrConfig with --snmpv2c option\n  You should always try running with snmpv2c support enabled, unless the device is known to be allergic to it.");
+    } 
+
+    if (!defined $sysObjectID || $sysObjectID eq 0) {
+        Error ("Unable to retrieve sysObjectID from $opts{router}.\n        Bad community name and/or Device not responding. End.");
+        return 0;
+    }
+    $opts{sysObjectID} = $sysObjectID; 
+    return 1;
+}
+
+###############################################################################
+
+sub override {
+    my($index) = @_;
+
+    foreach my $regx (@EXCEPTIONS) {
+        if (($ifType_d{$iftype{$index}} =~ /$regx/i) ||
+            ($ifdescr{$index} =~ /$regx/i)) {
+            Debug (" Collecting due to exceptions: @EXCEPTIONS");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+###############################################################################
+
+sub portlist2array {
+    my($plist) = @_;
+
+    my($chunk, $port, %plist);
+
+    if ($plist eq "none") {
+        return %plist;
+    }
+
+    foreach $chunk (split(/,/, $plist)) {
+        my($module,$ports) = split(/\//,$chunk,2);
+
+        if ($module !~ /^\d+$/) {
+            Warn ("Invalid port specification: $chunk");
+            next;
+        }
+
+        if ($ports eq "*") {
+            foreach $port (1..48) {
+                $plist{"$module/$port"} = 1;
+            }
+        } elsif ($ports =~ /^(\d+)-(\d+)$/) {
+            foreach $port ($1..$2) {
+                $plist{"$module/$port"} = 1;
+            }
+        } elsif ($ports =~ /^\d+$/) {
+            $plist{"$module/$ports"} = 1;
+        } else {
+            Warn ("Invalid port specification: $chunk\n");
+        }
+    }
+    return %plist;
+}
+
+###############################################################################
+
+sub getRoot {
+    return ($gInstallRoot);
+}
+
+###############################################################################
+#
+# Reads the threshold configuration file formatted with target keywords and target names
+#
+# Ex of target name:
+#	config chassis
+#    "monitor-thresholds = "locIfCarTrans:value:n:5:MAIL:%mail-pgm%:netflow\\\@localhost,
+#    locIfCarTrans:value:n:3:FILE:/usr/local/cricket/current/cricketALARM.html"
+#
+# Ex of target type:
+#	config cisco-interface-access
+#	 etc..
+#	config sub-interface
+#	 etc..
+#	config cisco-interface
+#	 etc..
+#	config standard-interface
+#	 etc..
+#
+# The configs apply to both HC and non-HC type interfaces transparently
+#
+###############################################################################
+
+sub monitorCreation {
+    my ($monitorConfig) = @_;
+
+    local(*FILE);
+
+    open (FILE, "< $monitorConfig") or die "\nCouldn't open the configuration file: $monitorConfig : $!\nAt a minimum create an empty file.\n";
+    my (%values);
+    my ($current) = "";
+
+    while (my $line = <FILE>) {
+
+
+        # Clean up comments and blank lines from the file
+        next unless (($line !~ /^#/) && ($line !~ /^[\s]+#/) && ($line !~ /^\s+$/));
+
+        chop($line);
+        my ($commentedout);
+        ($line,$commentedout) = split (/\#+/,$line) if ($line =~/#/);
+        $line = $line . "\n";
+
+        # Start processing configurations for each target-type defined in monitorConfig
+        if (($line =~ /^config\s+/)) {
+            ($a, $current) = split (/\s+/, $line);
+        } else {
+            # Saving the monitor-threshold related to the $current target-type
+            $values{$current} .= $line;
+        }
+
+    }
+    close (FILE) || die "Could not close file handle $monitorConfig : $!\n";
+
+    return (%values);
+}
