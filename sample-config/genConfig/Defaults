@@ -925,11 +925,9 @@ targetType switch-mem
 
 targetType	standard-interface
 	ds		=	"ifInOctets, ifOutOctets, ifInErrors,
-				ifOutErrors, ifInUcastPackets, ifOutUcastPackets,
-				ifInNUcastPackets, ifOutNUcastPackets"
+				ifOutErrors, ifInUcastPackets, ifOutUcastPackets"
 	view	=	"Octets: ifInOctets ifOutOctets,
 				UcastPackets: ifInUcastPackets ifOutUcastPackets,
-				NUcastPackets: ifInUcastPackets ifOutUcastPackets,
 				Errors: ifInErrors ifOutErrors"
 
 targetType	extended-interface
@@ -1009,32 +1007,23 @@ targetType	extended-interface-access-hc
 
 targetType	standard-interface-access
 	ds		=	"ifInOctets, ifOutOctets, ifInErrors,
-				ifOutErrors, ifInUcastPackets, ifOutUcastPackets,
-				ifInNUcastPackets, ifOutNUcastPackets"
+				ifOutErrors, ifInUcastPackets, ifOutUcastPackets"
 	view	=	"Octets: ifInOctets ifOutOctets,
 				UcastPackets: ifInUcastPackets ifOutUcastPackets,
-				McastPackets: ifInMulticastPackets ifOutMulticastPackets,
-				BcastPackets: ifInBroadcastPackets ifOutBroadcastPackets,
 				Errors: ifInErrors ifOutErrors"
 
 targetType	standard-interface-hc
     ds		=	"ifHCInOctets, ifHCOutOctets, ifInErrors,
-				ifOutErrors, ifHCInUcastPkts, ifHCOutUcastPkts,
-                         ifHCInMulticastPkts, ifHCInMulticastPkts, ifHCInBroadcastPkts, ifHCInBroadcastPkts"
+				ifOutErrors, ifHCInUcastPkts, ifHCOutUcastPkts"
     view	=	"Octets: ifHCInOctets ifHCOutOctets,
 				UcastPackets: ifHCInUcastPackets ifHCOutUcastPackets,
-				McastPackets: ifHCInMulticastPackets ifHCOutMulticastPackets,
-				BcastPackets: ifHCInBroadcastPackets ifHCOutBroadcastPackets,
 				Errors: ifInErrors ifOutErrors"
 
 targetType	standard-interface-access-hc
     ds		=	"ifHCInOctets, ifHCOutOctets, ifInErrors,
-				ifOutErrors, ifHCInUcastPkts, ifHCOutUcastPkts, ifHCInMulticastPkts, 
-                         ifHCInMulticastPkts, ifHCInBroadcastPkts, ifHCInBroadcastPkts"
+				ifOutErrors, ifHCInUcastPkts, ifHCOutUcastPkts"
     view	=	"Octets: ifHCInOctets ifHCOutOctets,
 				UcastPackets: ifHCInUcastPackets ifHCOutUcastPackets,
-				McastPackets: ifHCInMulticastPackets ifHCOutMulticastPackets,
-				BcastPackets: ifHCInBroadcastPackets ifHCOutBroadcastPackets,
 				Errors: ifInErrors ifOutErrors"
 
 targetType	sub-interface
