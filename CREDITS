@@ -1,0 +1,62 @@
+Thanks to Tobias Oetiker, the author of RRD, for his very
+useful tool. Without RRD, Cricket would be useless.
+
+The genDevConfig script is based on the hard work of:
+
+MRTG 2.8.8 cfgmaker by Tobias Oetiker 
+Cricket 0.71 listInterface by Jeff Allen
+genRtrConfig 1.4 by Mike Fisher
+
+It was initially developped and integrated by Mike Fisher, who
+released the first public version of genRtrConfig on sourceforge
+(version 1.4).
+
+The script was further developped under the genRtrConfig name by Francois Mikus. As the script evolved the name was changed to genDevConfig
+to reflect the new scope and mechanic.
+
+This script would not be where it is right now without the involvement of these fine people.
+
+Terje Bless 
+- Ideas, QA, patches, cvs magic.
+Mike Fisher 
+- Ideas, patches and all the rest!
+Jake Brutlag 
+- Help with Holt-Winter support.
+Joe Nave
+- QA
+Andrew Cutler, andrewc _AT_ xtra . co . nz
+- Ideas, QA patches.
+John Deatherage
+- Patches
+Kevin Stewart
+- QA, atches
+Stephen Muir
+- Fix
+Russell Heilling
+- QA, patches
+Manny Gonzales
+- QA, patches
+Florian Hinzmann
+- QA
+Ann Truxton
+- Fix
+Ole Hansen
+- Fix
+Dave Rynne, dave _AT_ esat.net
+- Fix
+Sergey Eremenko, s.eremenko _AT_ rtcomm-yug . ru
+- Patch
+Karl Carsten, ckarl _AT_ mpi-sb . mpg . de
+- Patches
+Cougar, cougar _AT_ random . ee
+- Ideas, patches
+Huw Lynch, huw_lynch _AT_ yahoo . com
+- QA, patches
+Ed Ravin, eravin _AT_ panix . com
+- QA 
+Stanislav Sinyagin, ssinyagin _AT_ yahoo . com
+- Ideas
+Bruno Clermont, bruno _AT_ gnome . ca
+- Ideas, complaints and being a pest about things that don't work.
+
+If you have been forgotten, please send me a note. fmikus _AT_ acktomic . com
