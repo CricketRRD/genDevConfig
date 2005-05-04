@@ -6,13 +6,14 @@ The genDevConfig script is based on the hard work of:
   * MRTG 2.8.8 cfgmaker by Tobias Oetiker 
   * Cricket 0.71 listInterface by Jeff Allen
   * genRtrConfig 1.4 by Mike Fisher
+  * genCatConfig 1.4 by Mike Fisher
 
 It was initially developped and integrated by Mike Fisher, who released the
 first public version of genRtrConfig on sourceforge (version 1.4).
 
 The script was further developed under the genRtrConfig name by
 Francois Mikus. As the script evolved the name was changed to genDevConfig
-to reflect the new scope and mechanic.
+to reflect the new scope and mechanics.
 
 This script would not be where it is right now without the involvement of
 these fine people.

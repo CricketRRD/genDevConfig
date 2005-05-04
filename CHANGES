@@ -7,12 +7,38 @@ has been split up to use the standard CREDITS, CHANGES format and changelog
 is handled by the sourceforge cvs cricket.sourceforge.net
 
 ===============================================================================
+04/05/2005
 
-18/02/2004 - Integrated by Francois Mikus
-
-# Version 2_0_0beta9 !WARNING!
+# Version 2_0_0beta10
 #
-# WARNING! From this point on genDevConfig is no longer fully compatible
+# NOTICE! Compatibility with previous version of genDevConfig and genRtrConfig
+# has been maintained. Please refrain from using beta9.
+#
+# Please update all plugins, libraries, defaults and main script. This
+# is a major release.
+#
+# Major new features
+# 
+# - new option:  -o, --ouputdir Provide the output dir for target being created
+# - added dot3stat support check for extended mib stats. (Andrew cutler)
+# - modified back-end for --monitors. Will now use cricket config tree
+#   monitorType's as definitions for monitor-thresholds. This feature
+#   requires the monitorType patch to HandleTarget in sourceforge.
+# - added support for non-unicast packets as a command-line option --nucast
+#   This will create targets with non-unicast stats if requested. Note that
+#   activating this for existing targets will break collection. As two new
+#   ds's are required to support this.
+# - updated all modules to support the NUcast packet support
+# - Deprecated --access and --core options, they will come back under a new
+#   form. As they influenced monitor thresholds for identical targetTypes.
+# - Changed Defaults, removed all access and core interface targetTypes.
+# - Bits and pieces all over the place. ;-)
+
+18/02/2005 - Integrated by Francois Mikus
+
+# Version 2_0_0beta9 !WARNING! DEPRECATED RELEASE DO NOT USE
+#
+# WARNING! genDevConfig targets are not compatible
 # with existing targets.
 #
 # WARNING! You will need to recreate/delete your INTERFACE targets. All others
@@ -40,7 +66,7 @@ is handled by the sourceforge cvs cricket.sourceforge.net
 #  are replaced with --nortragents, --noframestats and --showunused. Makes it
 #  so that out fo the box it is running with the recommended options.
 
-18/02/2004 - Integrated by Francois Mikus
+18/02/2005 - Integrated by Francois Mikus
 
 # Version 2_0_0beta8
 
@@ -49,7 +75,7 @@ is handled by the sourceforge cvs cricket.sourceforge.net
 #  - Modified Cisco 1900 catalyst device type to use standard interface
 #    as it does not support cisco-interface type.
 
-17/02/2004 - Integrated by Francois Mikus
+17/02/2005 - Integrated by Francois Mikus
 
 # Version 2_0_0beta7
 

@@ -38,13 +38,12 @@ package Common::genRtrConfig;
 
 require Exporter;
 
-my ($gInstallRoot);
 BEGIN {
-    $gInstallRoot = (($0 =~ m:^(.*/):)[0] || "./") . "..";
+    require '/etc/cricket/cricket-conf.pl';
 }
 
-use lib "$gInstallRoot/lib";
-use lib "$gInstallRoot/plugins/genConfig";
+use lib "$Common::global::gInstallRoot/lib";
+use lib "$Common::global::gInstallRoot/plugins/genConfig";
 use strict;
 no strict 'refs';
 
@@ -59,9 +58,7 @@ use genConfig::pluginUtils; ### Plugin processing
 
 # Common::Log::setFormat('extended');
 
-my $monitorConfig = "$gInstallRoot/lib/monitorConfig";
-
-my $VERSION = 'genDevConfig 2.0.0beta8';
+my $VERSION = 'genDevConfig 2.0.0beta10';
 
 ###############################################################################
 
@@ -93,7 +90,7 @@ USAGE: $0 [options] hostname
    --help
    --default "key:text"  - Add arbitrary values to the --default-- entry
                            of a target. This option can be used multiple times.
-                           Example: --default "nostate:true"
+                           Example: --default "admin-grp:network"
    -i       "key:text"   - Arbitrary values to be stored in chassis target
                            of the devices config-tree.
    --info   "key:text"     This option can be used multiple times.
@@ -117,7 +114,7 @@ USAGE: $0 [options] hostname
                             device will work just fine. You just won't get the
                             hierarchical layout of the interfaces.
    -m                    - Enable threshold monitoring on the target.
-   --monitors                  (Configured in  ./lib/monitorConfig)
+   --monitors               Configure templates in config-tree Defaults.
    -n                    - Disable Address to Name instance mapping
    --nodns
    --noframestats          Report frame relay interface stats. (BECN/FECN)
@@ -128,26 +125,29 @@ USAGE: $0 [options] hostname
                                (Supported for most plateforms)
    --nodupwarn           - Don't put warnings about hard coded inst numbers on
                            the generated HTML pages.
+   -o                    - Specify the output directory where the targetname
+   --outputdir <relativepath/>    subdir will be created in the config-tree. This
+                           path is relative to:
+			   \$crickethome/config-tree/
+                           Ex. --ouputdir genconfig/routers/
+			   
    --showunused            - Show unused (commented out) interfaces from the
                            config entirely.  This also affects interfaces
                            commented out with --namedonly.
 
    -Pxxx                 - Pass flag 'xxx' and possibly value 'yyy' to the 
-   -Pxxx=yyy               active plugin.  Can be used multiple times.
-   -Ph                   - print the active module's help info and exit. This
-   -Phelp                  is a special case of '-Pxxx'.
+   -Pxxx=yyy               vendor specific plugin.  Can be used multiple times.
+   -Ph                   - print the vendor specific module's help info
+                           and exit.
+   -Phelp                  This is a special case of '-Pxxx'.
 
    -p <portlist>         - Collect data for the listed ports only.
    --ports <portlist>      "0/*,1/5-7,4/6" Example of supported syntax.
                            Dont forget to double quote your comma delimited list.
-   --forceplugin <name>  - Explicitly select the plugin that will be used with this
-                           device. Use this option in case the device matches
-			   multiple plugins.
+   --forceplugin <name>  - Explicitly select the vendor specific plugin that
+                           will be used with this device. Use this option in
+			   case the device matches multiple plugins.
 
-   --access              - Specify that this is an access switch (Cisco design theory)
-                           This will activate only minimal thresholds on the 10/100 ports
-                           and full collection on any 1000 ports
-                               (currently only useful on Cisco gear)
    --gigonly             - This will process only the gigabit interfaces with
                            full threholds and collection.
                            *This will comment out all interfaces of less than gigabit speed.
@@ -161,7 +161,7 @@ USAGE: $0 [options] hostname
    --version             - Display version number
    --vendorint           - Get extra interface stats from proprietary MIB (For CiscoIOS and CatalystOS) or MIB-II (for all others).
                            This uses more data sources in the resulting RRD.
-                           Support for Cisco, Foundry, extended MIB-II.
+                           Support for Cisco, Foundry, rfc1643 Etherlike.
    --vlans               - Display VLAN interfaces (should you want them?)
                            Add VLANs to the targets file. They are normally skipped.
    --voip                - Report VoIP peer stats
@@ -438,7 +438,11 @@ my %OID = (
 
        ### MIB-II Switch traffic statistics
        'ipForwDatagrams'         => '1.3.6.1.2.1.4.6.0', ## Added .0 Check to see if this breaks
-       # some implementations...
+
+
+       ### from mib-2.transmission.dot3.dot3StatsTable.dot3StatsEntry
+       'dot3StatsIndex'   => '1.3.6.1.2.1.10.7.2.1.1',
+       
         );
 
 ###############################################################################
@@ -465,9 +469,11 @@ my %opts = (
     'groupname'         => '',
     'rtragents'         => 1,
     'coreint'           => 0,
-    'accessint'         => 0,
+    'nustats'                => 0,
+ #   'accessint'         => 0, Replace with monitoring classes
     'gigonly'           => 0,
     'monitors'          => 0,
+    'montemplate'       => '',
     'refinfo'           => {},
     'refdefault'        => {},
     'nodns'             => 0,
@@ -488,6 +494,7 @@ my %opts = (
     'order'                => '999', # Base order for all graphical display
     'plugindir'            => 'plugins/genConfig', # Alternate plugin directory
     'pluginflags'          => {},
+    'outputdir'          => '',
 
     ### Variables requiring promotion
 
@@ -515,8 +522,8 @@ my %opts = (
     'req_namedonly' => 0,
     'namedonly'     => 0,
     'req_vendorint' => 0, # Try to get vendor specific proprietary information for interface stats
-    'req_extendedint' => 0, # Try to get extended mib-ii interface stats
-    'extendedint' => 0, # Try to get extended mib-ii interface stats
+    'req_extendedint' => 0, # Try to get extended mib-ii interface stats if no vendor intrfs defined
+    'extendedint' => 0,
     'foundryint'    => 0,
     'req_vipstats'  => 1,
     'vipstats'      => 0,
@@ -589,7 +596,6 @@ while ($ARGV[0] =~ /^-/) {
     } elsif ($arg eq '--vendorint') {
         $opts{req_vendorint} = 1;
         $opts{req_extendedint} = 1;
-        $opts{extendedint} = 1;
     } elsif ($arg eq '-d' || $arg eq '--dontcollect') {
         push(@DONTCOLLECT, split(/\s*,\s*/, shift));
     } elsif ($arg eq '-e' || $arg eq '--exception') {
@@ -618,6 +624,9 @@ while ($ARGV[0] =~ /^-/) {
         $opts{nodns} = 1;
     } elsif ($arg eq '--nounused') {
         Info('--nounused : Deprecated.\n Now included by default, use --showunused to show all interfaces.');
+    } elsif ($arg eq '-o' || $arg eq '--outputdir') {
+        $opts{outputdir} = $Common::global::gConfigRoot . '/' . shift;
+	$opts{outputdir} !~ /[\w\/]+/ && usage();
     } elsif ($arg eq '--showunused') {
         $opts{nounused} = 0;
     } elsif ($arg eq '-p' || $arg eq '--ports') {
@@ -635,8 +644,8 @@ while ($ARGV[0] =~ /^-/) {
         Info('-r and --rtragents : Deprecated.\n Now included by default, use --rtragents to skip SAA Agent collection.');
     } elsif ($arg eq '--nortragents') {
         $opts{rtragents} = 0;
-    } elsif ($arg eq '--access') {
-        $opts{accessint} = 1;
+    } elsif ($arg eq '--nucast') {
+        $opts{nustats} = 1;
     } elsif ($arg eq '--gigonly') {
         $opts{gigonly} = 1;
     } elsif ($arg eq '--core') {
@@ -650,12 +659,14 @@ while ($ARGV[0] =~ /^-/) {
         version();
     } elsif ($arg eq '--loglevel') {
         $opts{logLevel} = shift;
+	$opts{loglevel} =~ /\w+/ && usage();
     } elsif ($arg eq '--voip') {
         $opts{req_voip} = 1;
     } elsif  ($arg eq '-2' || $arg eq '--snmpv2c') {
         $opts{req_usev2c} = 1;
     } elsif  ($arg eq '--forceplugin') {
         $opts{plugin} = shift;
+	$opts{plugin} =~ /\w+/ && usage();
     } elsif  ($arg =~ /^-P(\w+)(=(.*))?/) {
         push(@{$opts{pluginflags}->{$1}}, $3);
     } else {
@@ -703,8 +714,11 @@ exit if (! &contact() );
 
 
 ### Create the monitor thresholds configuration
-
-%{$opts{'thresholds'}} = monitorCreation($monitorConfig) if ($opts{monitors});
+# TO-DO REPLACE WITH A READ-IN OF CONFIG-TREE monitorTypes
+# This will avoid writing monitor-threshold variables for stuff that does
+# not have monitorTypes defined. As this incurs a sligth hit on the
+# collector process. And would would rather avoid that, eh!
+#%{$opts{'thresholds'}} = monitorCreation($monitorConfig) if ($opts{monitors});
 
 ###########################################################################
 ###
@@ -747,7 +761,7 @@ Debug ("\nMIB-II System description: $opts{sysDescr}");
 
 ### External plugins for device discovery
 
-my @plugins = genConfig::pluginUtils::find_plugin($gInstallRoot, \%opts);
+my @plugins = genConfig::pluginUtils::find_plugin($Common::global::gInstallRoot, \%opts);
 my $plugin;
 
 if (!@plugins) {
@@ -757,8 +771,10 @@ if (!@plugins) {
 	  "Use the --plugin flag to choose one of the following:\n",
 	  "     ", join("\n     ", @plugins), "\n");
 } else {
-    Info ("Found a plugin for $opts{sysDescr} using custom functions.");
+    Info ("Found a plugin for $opts{sysDescr} using custom discovery functions.");
     $plugin = $plugins[0];
+    # Find out model, chassisname, chassistype, etc. from the discovery
+    # plugin module.
     $plugin->discover(\%opts);
 }
 
@@ -950,6 +966,11 @@ my %ifspeed         = gettable('ifSpeed');
 my %ifadminstatus   = gettable('ifAdminStatus');
 my %ifoperstatus    = gettable('ifOperStatus');
 
+### Get dot3StatsIndex info. Will be used to check if extendedints are supported
+my %dot3statsindex;
+if ($opts{req_extendedint}) {
+    %dot3statsindex	= reverse gettable('dot3StatsIndex');
+}
 
 ### Get address to interface mapping info.
 
@@ -995,18 +1016,18 @@ my $ipForwDatagrams = get('ipForwDatagrams');
 ### Creating the destination target file
 ### Start adding information for the target starting with
 ###
-### --default--       section
-### Chassis target    section
-### Custom targets    section
-### Interface targets section
+### --default--                     section
+### Chassis target                  section
+### Custom non-interface targets    section
+### Interface targets               section
 ###
 ###########################################################################
 
 ### Create the target directory and targets file
 
-$opts{rdir} = subdir($opts{router}, $opts{lowercase});
+$opts{rdir} = subdir($opts{outputdir} . $opts{router}, $opts{lowercase});
 
-$file = $opts{file} = new genConfig::File("$opts{rdir}/targets", $opts{'thresholds'});
+$file = $opts{file} = new genConfig::File("$opts{rdir}/targets");
 
 ### Print the header information
 
@@ -1072,7 +1093,7 @@ $file->writetarget('--default--', '',
 
 if ($opts{chassisstats}) {
 
-    # Use the pre-identfied router type
+    # Use the pre-identified router type
 
     my ($ldesc, $sdesc);
     my ($inst) = 0;
@@ -1098,6 +1119,7 @@ if ($opts{chassisstats}) {
     push (@options, 'sortby', $opts{sortby}) if ($opts{sortby});
     push (@options, 'collect', 'false') if (!$opts{collect});
     push (@options, 'class', $opts{class}) if ($opts{class});
+    push (@options, 'monitor-type', $opts{chassisname} ) if ($opts{chassisname} ne 'Chassis-Generic');
 
     # Write the data to the file
 
@@ -1393,8 +1415,8 @@ if ($opts{req_modular}) {
         Debug("\$slot = $slot");
         Debug("\$opts{router} = $opts{router}");
         Debug("\$slotNameList{$slot} = $slotNameList{$slot}");
-        my $_dir  = subdir("$opts{router}/$slotNameList{$slot}", $opts{lowercase});
-        my $_file = new genConfig::File("$_dir/ports", $opts{'thresholds'});
+        my $_dir  = subdir($opts{outputdir} . "$opts{router}/$slotNameList{$slot}", $opts{lowercase});
+        my $_file = new genConfig::File("$_dir/ports");
         $slotList{$slot} = $_file;
     }
 }
@@ -1407,7 +1429,8 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     my $dlci = undef;
     my @config = ();
     my $hc = '';
-    my $class = '';
+    my $class = ''; # Used for classifying devices, out of the box for rancid
+    my $mtclass = ''; # Used for adding options to threshold monitors
     my $match = 0;
     my $wmatch = 0;
     my $customsdesc = '';
@@ -1450,11 +1473,15 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     # Set the interface classification type
     # For each type that is defined a matching targetType must be defined
     # in the config-tree, or else Cricket will be confused as to what
-    # to do with a new targetType. (DS's to collect, view definition)
+    # to do with a new targetType. (DS's to collect and view definition)
 
-    $class = '-core' if ($opts{coreint} && $iftype{$index} != 22);
-    $class = '-access' if ($opts{accessint});
+    # $class = '-core' if ($opts{coreint} && $iftype{$index} != 22);
 
+    # If monitoring templates classes are requested, activate the class modifier for
+    # that will be appended to the monitor-type value
+    if ($opts{montemplate}) {
+        $mtclass = $opts{montemplate};
+    }
     ### Get the target name and interface speed.
 
     my($target) = $ifdescr{$index};
@@ -1462,6 +1489,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     $target =~ s/\,/_/g;
     my $b = ($opts{units} eq "bytes") ? 8 : 1;
 
+    #
     ###
     ### Add slot/port mapping if present and only if it is required by
     ### the device. This would mean it has a special inst mapping
@@ -1498,7 +1526,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
 
         ### Contivity IPSec tunnel - change target name and set speed to no zero value
 
-        push(@config, 'target-type' => 'standard-interface' . $class . $hc);
+        push(@config, 'target-type' => 'standard-interface' . $hc);
 
         my %contivity;
         my $src;
@@ -1589,10 +1617,14 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         # include the default type of standard-interface for each target
 	# unless extended mib-ii are supported.
 
+        # Check if NU Cast packet statistics are required
+	my ($nu) = $opts{nustats} ? '-nu' : '';
+	
+
         if($opts{extendedint}) {
-	     push(@config, 'target-type' => 'extended-interface' . $class . $hc);
+	     push(@config, 'target-type' => 'extended-interface' . $nu . $hc);
 	} else {
-             push(@config, 'target-type' => 'standard-interface' . $class . $hc);
+             push(@config, 'target-type' => 'standard-interface' . $nu . $hc);
 	}
     }
 
@@ -1683,7 +1715,11 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         $header .= "\n### - Use '--voip' to enable stats.\n";
         $c="# ";
         Debug (" Voip & No --voip");
-    } elsif ($speed == 0 &&
+   } elsif ($opts{gigonly} && (int($ifspeed{$index}) >= 1000000000) ) {
+        $header .= "\n### - Do not use '--gigonly' to enable stats.\n";
+        $c="# ";
+        Debug (" Skipping < 1000Mbit interfaces, do not use --gigonly to see them.");
+   } elsif ($speed == 0 &&
          !($iftype{$index} == 103 || $iftype{$index} == 104 ) && !$opts{nortelbox}) {
         $header .= "\n### - Has an insane speed.\n";
         $c="# ";
@@ -1726,6 +1762,15 @@ $c="# ";
     ### use the --showunused option in calling the script.
 
     next if ($opts{nounused} && $c ne '');
+
+    ###
+    ### Add the monitor thresholds for the interface target-type
+    ### if anything is defined.
+
+    my %tmpconfig = @config;
+    push(@config,
+        'monitor-type' => $tmpconfig{'target-type'} . $mtclass . $hc,
+        );
 
     ###
     ### Write the target interface to the configuration file
@@ -1851,62 +1896,5 @@ sub portlist2array {
 ###############################################################################
 
 sub getRoot {
-    return ($gInstallRoot);
-}
-
-###############################################################################
-#
-# Reads the threshold configuration file formatted with target keywords and target names
-#
-# Ex of target name:
-#	config chassis
-#    "monitor-thresholds = "locIfCarTrans:value:n:5:MAIL:%mail-pgm%:netflow\\\@localhost,
-#    locIfCarTrans:value:n:3:FILE:/usr/local/cricket/current/cricketALARM.html"
-#
-# Ex of target type:
-#	config cisco-interface-access
-#	 etc..
-#	config sub-interface
-#	 etc..
-#	config cisco-interface
-#	 etc..
-#	config standard-interface
-#	 etc..
-#
-# The configs apply to both HC and non-HC type interfaces transparently
-#
-###############################################################################
-
-sub monitorCreation {
-    my ($monitorConfig) = @_;
-
-    local(*FILE);
-
-    open (FILE, "< $monitorConfig") or die "\nCouldn't open the configuration file: $monitorConfig : $!\nAt a minimum create an empty file.\n";
-    my (%values);
-    my ($current) = "";
-
-    while (my $line = <FILE>) {
-
-
-        # Clean up comments and blank lines from the file
-        next unless (($line !~ /^#/) && ($line !~ /^[\s]+#/) && ($line !~ /^\s+$/));
-
-        chop($line);
-        my ($commentedout);
-        ($line,$commentedout) = split (/\#+/,$line) if ($line =~/#/);
-        $line = $line . "\n";
-
-        # Start processing configurations for each target-type defined in monitorConfig
-        if (($line =~ /^config\s+/)) {
-            ($a, $current) = split (/\s+/, $line);
-        } else {
-            # Saving the monitor-threshold related to the $current target-type
-            $values{$current} .= $line;
-        }
-
-    }
-    close (FILE) || die "Could not close file handle $monitorConfig : $!\n";
-
-    return (%values);
+    return ($Common::global::gInstallRoot);
 }

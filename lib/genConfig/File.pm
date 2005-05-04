@@ -27,7 +27,7 @@ use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 use Exporter;
 
 @ISA = qw(Exporter);
-@EXPORT = qw(set_file_header setthreshash subdir);
+@EXPORT = qw(set_file_header subdir);
 
 my ($gInstallRoot);
 BEGIN {
@@ -54,17 +54,16 @@ sub set_file_header {
 
 ###############################################################################
 # new - Create a new file object.  If a filename is given, the file is opened.
-#       If a reference to a thresholds hash is given, it's recorded.
-###############################################################################
+#
+################################################################################
 
 sub new {
-    my($class, $filename, $thresholds) = @_;
+    my($class, $filename) = @_;
 
     my $self = {};
     bless $self;
 
     $self->open($filename) if ($filename);
-    $self->setthreshash($thresholds) if ($thresholds);
 
     return $self;
 }
@@ -81,16 +80,6 @@ sub open {
     open($self->{'file'}, ">$filename") || die "Can't open $filename";
 
     print({$self->{'file'}} $Header) if ($Header);
-}
-
-###############################################################################
-# setthreshash - Record the ref to the thresholds hash for later use.
-###############################################################################
-
-sub setthreshash {
-    my($self, $hash) = @_;
-
-    $self->{'thresholds'} = $hash;
 }
 
 ###############################################################################
@@ -120,15 +109,14 @@ sub writepair {
 }
 
 ###############################################################################
-# writetarget - Write a target definition to the file.  Include thresholf info
-#               if it exists.
-###############################################################################
+# writetarget - Write a target definition to the file.
+#
+################################################################################
 
 sub writetarget {
     no strict 'refs';
     my($self, $name, $comment, %value) = @_;
 
-    my $t = $self->{'thresholds'};
     my $f = $self->{'file'};
 
     print $f "${comment}target $name\n";
@@ -136,15 +124,6 @@ sub writetarget {
     foreach my $key (sort keys %value) {
         $self->writepair($key, $value{$key}, $comment);
 
-        # Write the monitor thresholds for the TARGET TYPES
-        if (defined ($t->{$value{$key}}) && ($name ne "--default--")) {
-            print $f "$t->{$value{$key}}\n";
-        }
-    }
-
-    ### Do the threshold processing based on the TARGET NAME
-    if (defined($t->{$name})) {
-        print $f "$t->{$name}\n";
     }
 
     print $f "\n";
