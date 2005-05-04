@@ -1,0 +1,33 @@
+#
+# Foundry network device sub-tree defaults - for use with genDevConfig
+#
+#
+#    Copyright (C) 2005 Francois Mikus
+#
+
+### Foundry
+
+OID     foundryL4SLBTotalConnections    1.3.6.1.4.1.1991.1.1.4.1.4
+OID     foundryL4SLBUnsuccessfulConnections 1.3.6.1.4.1.1991.1.1.4.1.25
+
+datasource dsFoundryL4SLBTotalConnections
+        ds-source = snmp://%snmp%/foundryL4SLBTotalConnections.0
+        rdd-ds-type = COUNTER
+
+datasource dsFoundryL4SLBUnsuccessfulConnections
+        ds-source = snmp://%snmp%/foundryL4SLBUnsuccessfulConnections.0
+        rdd-ds-type = COUNTER
+
+targetType      foundryL4SLB
+        ds = "dsFoundryL4SLBTotalConnections, dsFoundryL4SLBUnsuccessfulConnections"
+        view = "Connections: dsFoundryL4SLBTotalConnections dsFoundryL4SLBUnsuccessfulConnections"
+
+graph   dsFoundryL4SLBTotalConnections
+        legend = "Total Connections"
+
+graph   dsFoundryL4SLBUnsuccessfulConnections
+        legend = "UnsuccessfulConnections"
+
+
+
+
