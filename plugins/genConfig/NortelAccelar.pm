@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.03;
+my $VERSION = 1.04;
 
 ### End package init
 
@@ -127,10 +127,8 @@ sub discover {
     $opts->{ttype} = 'Nortel-Passport-8xxx';
     $opts->{chassisname} = 'Chassis-Nortel-Passport';
 
-    # Default feature promotions for IOS Devices
+    # Default feature promotions for Nortel Devices
     $opts->{usev2c} = 1 if ($opts->{req_usev2c});
-    $opts->{extendedint} = 1    if ($opts->{req_extendedint});
-    $opts->{nortelint} = 1  if ($opts->{req_vendorint});
     $opts->{nortelbox} = 1;
     return;
 }
@@ -201,19 +199,12 @@ sub custom_interfaces {
     ###
     ### START DEVICE CUSTOM INTERFACE CONFIG SECTION
     ###
-
-
-    if ($opts->{extendedint}) {
-
-        # Check if NUCast packet statistics are required
-	my ($nu) = $opts->{nustats} ? '-nu' : '';
-
-        ### Collect extended info from MIB-II
-
-        push(@config, 'target-type' => 'extended-interface' . $nu . $hc);
-        $match = 1;
+    
+    # Set a non-sticky interface setting for invalid speed in nortel MIBs
+    if ($opts->{ttype} eq 'Nortel-Passport-8xxx'){
+        $opts->{nospeedcheck} = 1;
     }
-
+    
     ###
     ### END INTERFACE CUSTOM CONFIG SECTION
     ###

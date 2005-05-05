@@ -58,7 +58,7 @@ use genConfig::pluginUtils; ### Plugin processing
 
 # Common::Log::setFormat('extended');
 
-my $VERSION = 'genDevConfig 2.0.0beta10';
+my $VERSION = 'genDevConfig 2.0.0beta11';
 
 ###############################################################################
 
@@ -89,11 +89,14 @@ USAGE: $0 [options] hostname
    -h                    - Print this message.
    --help
    --default "key:text"  - Add arbitrary values to the --default-- entry
-                           of a target. This option can be used multiple times.
+                           of a target. Double-quoted value pairs.
+			   This option can be used multiple times.
                            Example: --default "admin-grp:network"
    -i       "key:text"   - Arbitrary values to be stored in chassis target
-                           of the devices config-tree.
+                           of the devices config-tree. Double-quoted value
+			   pairs.
    --info   "key:text"     This option can be used multiple times.
+                           Double-quoted value pairs.
                            Example: -i "testsla:true"
                                     -i "pagergroup:admins"
    --ip <ip>             - Specify an alternate ip address for the device
@@ -125,6 +128,10 @@ USAGE: $0 [options] hostname
                                (Supported for most plateforms)
    --nodupwarn           - Don't put warnings about hard coded inst numbers on
                            the generated HTML pages.
+   --nomtucheck          - Don't check for insane mtu, use it for interactive
+                           discovery.
+   --nospeedcheck        - Don't check for insane speed, use it for interactive
+                           discovery.
    -o                    - Specify the output directory where the targetname
    --outputdir <relativepath/>    subdir will be created in the config-tree. This
                            path is relative to:
@@ -504,8 +511,8 @@ my %opts = (
     # and the device supports the feature
     # it will be promoted to an active status.
 
-    'req_vendorbox' => 1,
-    'nortelbox'      => 0,
+    'req_vendorbox' => 1, # always request chassis stats(temp, cpu, mem)
+    'nortelbox'     => 0,
     'ciscobox'      => 0,
     'packeteerbox'  => 0,
     'foundrybox'    => 0,
@@ -541,9 +548,17 @@ my %opts = (
     'router'           => '', ### Router name taken from the command-line
 
     ###
-    ### Non-Sticky variables. These are reset to true at each iteration of the interface loop
+    ### Non-Sticky variables. 
+    ### These are reset to true at each iteration of the interface loop
     ###
     'show_max'         => 1, ### Should the max and max_octets variable be added in the configuration
+    'nospeedcheck'     => 0, ### Permit certain interfaces to not have a speed set.
+    'nomtucheck'       => 0, ### Permit certain interfaces to not have an mtu set.
+    ###
+    ### Override Non-Sticky variables. 
+    ###
+    'force_nospeedcheck' => 0, ### Override non-stikyness for no speedcheck.
+    'force_nomtucheck'   => 0, ### Override non-stickyness for nomtucheck
 
     ###
     ### SNMP MIB Collection variables
@@ -559,6 +574,7 @@ my %opts = (
     'chassisPhysicalDescr' => '', ### MIB-II SNMP Chassis serial output
 
     'thresholds'       => {}, ### Thresholds for automatic application
+                              ### TO-DO read them in from the config-tree.
     );
 
 genConfig::SNMP::register_oids(%OID);
@@ -624,6 +640,10 @@ while ($ARGV[0] =~ /^-/) {
         $opts{nodns} = 1;
     } elsif ($arg eq '--nounused') {
         Info('--nounused : Deprecated.\n Now included by default, use --showunused to show all interfaces.');
+    } elsif ($arg eq '--nospeedcheck') {
+        $opts{force_nospeedcheck} = 1;
+    } elsif ($arg eq '--nomtucheck') {
+        $opts{force_nomtucheck} = 1;
     } elsif ($arg eq '-o' || $arg eq '--outputdir') {
         $opts{outputdir} = $Common::global::gConfigRoot . '/' . shift;
 	$opts{outputdir} !~ /[\w\/]+/ && usage();
@@ -659,7 +679,7 @@ while ($ARGV[0] =~ /^-/) {
         version();
     } elsif ($arg eq '--loglevel') {
         $opts{logLevel} = shift;
-	$opts{loglevel} =~ /\w+/ && usage();
+	$opts{logLevel} !~ /\w+/ && usage();
     } elsif ($arg eq '--voip') {
         $opts{req_voip} = 1;
     } elsif  ($arg eq '-2' || $arg eq '--snmpv2c') {
@@ -765,7 +785,7 @@ my @plugins = genConfig::pluginUtils::find_plugin($Common::global::gInstallRoot,
 my $plugin;
 
 if (!@plugins) {
-    Info ("No plugin found for $opts{sysDescr} using builtin functions.");
+    Info (" No plugin found for $opts{sysDescr} using builtin functions.");
 } elsif (@plugins > 1) {
     Die("Multiple plugins found.  ",
 	  "Use the --plugin flag to choose one of the following:\n",
@@ -1378,9 +1398,6 @@ foreach $index (keys %ifdescr) {
     }
 }
 
-Info ("......................... [DONE]");
-
-
 if (!$unique) {
     $file->write(<<EOD);
 ######################################################################
@@ -1402,24 +1419,29 @@ html    footnotes
     </TABLE>
 EOD
 }
+Info ("......................... [DONE]");
+Info ("Processing Pre-Process modular output");
 
+if ($opts{req_modular}) {
+    $slotList{chassis} = $file;
+    foreach my $slot (sort keys %slotList) {
+        next if ($slot eq 'chassis');
+        Debug(" modular:\$slot = $slot");
+        Debug(" modular:\$opts{router} = $opts{router}");
+        Debug(" modular:\$slotNameList{$slot} = $slotNameList{$slot}");
+        my $_dir  = subdir($opts{outputdir} . "$opts{router}/$slotNameList{$slot}", $opts{lowercase});
+        my $_file = new genConfig::File("$_dir/ports");
+        $slotList{$slot} = $_file;
+    }
+}
+
+Info ("......................... [DONE]");
 
 ### Write out the interface targets.
 
 Info ("Processing Interface list                ");
 
 my $order = 899; # Default Starting order (Max of 899 interfaces)
-if ($opts{req_modular}) {
-    $slotList{chassis} = $file;
-    foreach my $slot (sort keys %slotList) {
-        Debug("\$slot = $slot");
-        Debug("\$opts{router} = $opts{router}");
-        Debug("\$slotNameList{$slot} = $slotNameList{$slot}");
-        my $_dir  = subdir($opts{outputdir} . "$opts{router}/$slotNameList{$slot}", $opts{lowercase});
-        my $_file = new genConfig::File("$_dir/ports");
-        $slotList{$slot} = $_file;
-    }
-}
 
 foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     my $sdesc = '';
@@ -1437,12 +1459,25 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     my $customldesc = '';
     my $customfile = '';
 
+    # Force stickyness on non-sticky global opts variables
+    $opts{nomtucheck} = 1 if $opts{force_nomtucheck}; 
+    $opts{nospeedcheck} = 1 if $opts{force_nospeedcheck}; 
+
+    # See if extended statistics are supported
+    if ($dot3statsindex{$index} && $opts{req_extendedint}) {
+        Debug(" extended:\$index = $index");
+	Debug(" extended:\$dot3statsindex{$index} = $dot3statsindex{$index}");
+	$opts{extendedint} = 1;
+    }
+
+    # Assign the interface to the right subdir/target file for --modular
+    # devices.
     if ($opts{req_modular}) {
-        Debug("\$index = $index");
-        Debug("\$ifdescr{$index} = $ifdescr{$index}");
-        Debug("\$slotPortList{$ifdescr{$index}} = $slotPortList{$ifdescr{$index}}");
-        Debug("\$slotList{$slotPortList{$ifdescr{$index}}} = $slotList{$slotPortList{$ifdescr{$index}}}");
-        my $_file = $slotList{$slotPortList{$ifdescr{$index}}};
+        Debug(" modular:\$index = $index");
+        Debug(" modular:\$ifdescr{$index} = $ifdescr{$index}");
+        Debug(" modular:\$slotPortList{$ifdescr{$index}} = $slotPortList{$ifdescr{$index}}") if exists $slotPortList{$ifdescr{$index}};
+        Debug(" modular:\$slotList{$slotPortList{$ifdescr{$index}}} = $slotList{$slotPortList{$ifdescr{$index}}}") if exists $slotPortList{$ifdescr{$index}};
+        my $_file = $slotList{$slotPortList{$ifdescr{$index}}} if exists $slotPortList{$ifdescr{$index}};
         if ($_file) {
           $file = $_file;
         } else {
@@ -1465,7 +1500,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
 
     # Push in the configuration for the interface the snmp-version required
     # to query HC 64bit snmp counters. Only if all the conditions are met.
-    Debug ("Conditions met for HC counters applying -hc\n") if ($hc eq '-hc');
+    Debug (" Conditions met for HC counters applying -hc\n") if ($hc eq '-hc');
 
 
     push(@config, 'snmp-version' => '2c') if ($hc eq '-hc');
@@ -1565,7 +1600,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
 
     }  elsif ($plugin) {
 
-        Info ("Found a plugin for index $index using custom interface functions.");
+        Info (" Found a plugin for index $index using custom interface functions.");
         my %data = (
                     'ifspeed'  => \%ifspeed,
                     'ifdescr'  => \%ifdescr,
@@ -1689,10 +1724,6 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         'rrd-max-octets'      => $maxoctets,
 	);
     }
-    ### Always reset the show_max variable to true. If an interface
-    ### Does not need it, disable it in the module that requires it at each iteration.
-    $opts{show_max} = 1; 
-
 
     ### Generate a comment containing the interface index and type.
     ### This info is useful for debugging.
@@ -1700,8 +1731,8 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     my $header = "### Interface $index: $ifType_d{$iftype{$index}} ($iftype{$index})";
 
     ### See if we need to comment this interface out for various reasons...
-    Debug ("$header ");
-    Debug ("desc: $intdescr{$index} ") if defined $intdescr{$index};
+    Debug (" $header ");
+    Debug (" desc: $intdescr{$index} ") if defined $intdescr{$index};
 
     if (!$opts{collectall} && !$collect{$index}) {
         $header .= "\n### - Commented out by an administrator.\n";
@@ -1716,19 +1747,15 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         $c="# ";
         Debug (" Voip & No --voip");
    } elsif ($opts{gigonly} && (int($ifspeed{$index}) >= 1000000000) ) {
-        $header .= "\n### - Do not use '--gigonly' to enable stats.\n";
+        $header .= "\n### - Filtered at user request: '--gigonly'.\n";
         $c="# ";
         Debug (" Skipping < 1000Mbit interfaces, do not use --gigonly to see them.");
-   } elsif ($speed == 0 &&
-         !($iftype{$index} == 103 || $iftype{$index} == 104 ) && !$opts{nortelbox}) {
-        $header .= "\n### - Has an insane speed.\n";
+   } elsif ((!defined($speed) || $speed == 0) && !$opts{nospeedcheck}) {
+         #!($iftype{$index} == 103 || $iftype{$index} == 104 ) && !$opts{nortelbox}) {
+        $header .= "\n### - Has zero or insane speed.\n";
         $c="# ";
-        Debug (" Insane Speed");
-    } elsif ($speed == 0  && !($iftype{$index} == 103 || $iftype{$index} == 104)) {
-        $header .= "\n### - Speed of 0\n";
-        $c="# ";
-        Debug (" speed: 0");
-    } elsif ((!defined($ifmtu{$index}) || $ifmtu{$index} == 0) && !($iftype{$index} == 103 || $iftype{$index} == 104)) {
+        Debug (" Has zero or insane Speed");
+    } elsif ((!defined($ifmtu{$index}) || $ifmtu{$index} == 0) && !$opts{nomtucheck}) {
         $header .= "\n### - Has an insane MTU.\n";
         $c="# ";
         Debug (" speed: $speed_str mtu: Insane");
@@ -1763,6 +1790,14 @@ $c="# ";
 
     next if ($opts{nounused} && $c ne '');
 
+    ### Always reset sticky variables
+    ### Reset the show_max variable to true. If an interface
+    ### Does not need it, disable it in the module that requires it at each iteration.
+
+    $opts{show_max} = 1; 
+    $opts{nomtucheck} = 0; 
+    $opts{nospeedcheck} = 0; 
+
     ###
     ### Add the monitor thresholds for the interface target-type
     ### if anything is defined.
@@ -1794,9 +1829,9 @@ $c="# ";
     }
 
     if (!$wmatch) {
-        Debug "Target: $target";
-        Debug "Commented-out: $c";
-        Debug "Config: @config";
+        Debug "### Target: $target ###";
+        Debug " Commented-out: $c";
+        Debug " Config: @config";
         $file->write("#\n");
         $file->writetarget($target, $c, @config);
     }

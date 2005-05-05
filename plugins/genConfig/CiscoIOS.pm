@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.10;
+my $VERSION = 1.11;
 
 ### End package init
 
@@ -760,7 +760,9 @@ sub custom_interfaces {
             $customsdesc .= $PeerCfgOrigAddr{$peerid.'.'.$index}; 
             $customldesc = "Call Address: $PeerCfgOrigAddr{$peerid.'.'.$index}";
         }
+	# Set any non-sticky variables
 	$opts->{show_max} = 0; # Do not display max and max_octets for dp interfaces
+	$opts->{nomtucheck} = 1; # Do not skip the interface due to insane mtu
 
         $match = 1;
 
@@ -791,7 +793,8 @@ sub custom_interfaces {
             push(@config, 'target-type' => 'sub-interface' . $hc);
             $match = 1;
         }
-        $ifmtu{$index} = 1 if (!defined($ifmtu{$index}) || $ifmtu{$index} == 0);
+        $opts->{nomtucheck} = 1;
+	#$ifmtu{$index} = 1 if (!defined($ifmtu{$index}) || $ifmtu{$index} == 0);
 
     }  elsif ($opts->{ciscoint}) {
 
