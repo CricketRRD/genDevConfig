@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.02;
+my $VERSION = 1.03;
 
 ### End package init
 
@@ -413,9 +413,6 @@ sub custom_interfaces {
 		$match = 1;
 
 	}  elsif ($opts->{juniperint}) {
-
-		# Apply logic for filtering --gigonly interfaces
-		next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
 
 		push(@config, 'target-type' => 'juniper-interface-hc');
 		$match = 1;

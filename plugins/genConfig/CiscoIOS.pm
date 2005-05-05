@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.09;
+my $VERSION = 1.10;
 
 ### End package init
 
@@ -150,7 +150,7 @@ my %OIDS = (
 
        ### from mib-2.transmission.dialControlMib.dialControlMibObjects.
        ###      dialCtlPeer.dialCtlPeerCfgTable.dialCtlPeerCfgEntry.
-       'dialCtlPeerCfgOriginateAddress' => '1.3.6.1.2.1.10.21.1.2.1.1.4'
+       'dialCtlPeerCfgOriginateAddress' => '1.3.6.1.2.1.10.21.1.2.1.1.4',
 
       );
 
@@ -163,7 +163,7 @@ my %PeerCfgOrigAddr;
 my $peerid;
 my $snmp;
 
-my $script = "CiscoIOS genRtrConfig Module";
+my $script = "CiscoIOS genDevConfig Module";
 
 ###############################################################################
 ###############################################################################
@@ -798,12 +798,12 @@ sub custom_interfaces {
         ### Collect extra info from Cisco MIB
 
         # Override global classification to only apply minimal thresholds
-        $class = '-access' if (($iftype{$index} == 81 ) || ($iftype{$index} == 77) || ($iftype{$index} == 23)); # ISDN
+        #$class = '-access' if (($iftype{$index} == 81 ) || ($iftype{$index} == 77) || ($iftype{$index} == 23)); # ISDN
 
-        # Apply logic for filtering --gigonly interfaces
-        next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
+	# Check if NU Cast packet statistics are required
+        my ($nu) = $opts->{nustats} ? '-nu' : '';
 
-        push(@config, 'target-type' => 'cisco-interface' . $class . $hc);
+        push(@config, 'target-type' => 'cisco-interface' . $nu . $hc);
         $match = 1;
     }
 

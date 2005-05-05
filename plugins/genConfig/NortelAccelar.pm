@@ -205,15 +205,12 @@ sub custom_interfaces {
 
     if ($opts->{extendedint}) {
 
+        # Check if NUCast packet statistics are required
+	my ($nu) = $opts->{nustats} ? '-nu' : '';
+
         ### Collect extended info from MIB-II
 
-        # Override global classification to only apply minimal thresholds
-        $class = '-access' if (($iftype{$index} == 81 ) || ($iftype{$index} == 77) || ($iftype{$index} == 23)); # ISDN
-
-        # Apply logic for filtering --gigonly interfaces
-        next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
-
-        push(@config, 'target-type' => 'extended-interface' . $class . $hc);
+        push(@config, 'target-type' => 'extended-interface' . $nu . $hc);
         $match = 1;
     }
 

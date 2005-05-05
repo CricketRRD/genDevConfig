@@ -1,5 +1,5 @@
 # -*-perl-*-
-#    genRtrConfig plugin module for Catalyst switches running CatOS
+#    genDevConfig plugin module for Catalyst switches running CatOS
 #
 #    Copyright (C) 2003 Mike Fisher
 #
@@ -31,7 +31,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 0.01;
+my $VERSION = 0.02;
 
 ### End package init
 

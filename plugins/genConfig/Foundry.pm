@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.03;
+my $VERSION = 1.04;
 
 ### End package init
 
@@ -214,10 +214,13 @@ sub custom_interfaces {
 
         ### Collect extra stats from the Foundry MIB
 
+        #Check if NU Cast packet statistics are required
+        my ($nu) = $opts->{nustats} ? '-nu' : '';
+	
         # Apply logic for filtering option --gigonly interfaces
         next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
 
-        push(@config, 'target-type' => 'foundry-interface' . $class . $hc);
+        push(@config, 'target-type' => 'foundry-interface' . $nu . $hc);
     }
 
     ###

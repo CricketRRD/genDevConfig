@@ -1,5 +1,5 @@
 # -*-perl-*-
-#    genRtrConfig plugin module for Catalyst switches running CatOS
+#    genDevConfig plugin module for Catalyst switches running CatOS
 #
 #    Copyright (C) 2003 Mike Fisher
 #
@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.03;
+my $VERSION = 1.04;
 
 ### End package init
 
@@ -268,9 +268,6 @@ sub custom_interfaces {
 
 
     ### Collect extra info from Cisco Catalyst MIB
-
-    # Apply logic for filtering --gigonly interfaces
-    next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
 
     push(@config, 'target-type' => 'standard-interface' . $hc);
     $match = 1;

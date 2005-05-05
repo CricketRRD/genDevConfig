@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.05;
+my $VERSION = 1.06;
 
 ### End package init
 
@@ -188,9 +188,6 @@ sub custom_interfaces {
     ###
     ### DEVICE CUSTOM INTERFACE CONFIG SECTION
     ###
-
-    # Apply logic for filtering --gigonly interfaces
-    next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
 
     push(@config, 'target-type' => 'standard-interface' . $hc);
     $match = 1;

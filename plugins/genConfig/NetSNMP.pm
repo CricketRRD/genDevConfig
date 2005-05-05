@@ -1,5 +1,5 @@
 # -*-perl-*-
-#    genRtrConfig plugin module
+#    genDevConfig plugin module
 #
 #    Copyright (C) 2004 Mike Fisher
 #
@@ -33,7 +33,7 @@ our @ISA = qw(genConfig::Plugin);
 
 ### Start package init
 
-my $VERSION = 1.00;
+my $VERSION = 1.01;
 
 ### End package init
 
@@ -103,7 +103,7 @@ my @INCLUDEFS = ();
 ### Private variables
 ###############################################################################
 
-my $script = "genRtrConfig NetSNMP Module";
+my $script = "NetSNMP genDevConfig Module";
 
 ###############################################################################
 # usage - Give help info for the plugin.  Exit when done.
