@@ -115,12 +115,13 @@ sub discover {
     ### START DEVICE DISCOVERY SECTION
     ###
 
-    ### Figure out the IOS version number.  We need this
-    ### to figure out which oid to use to get interface descriptions and which
+    ### Figure out the OS version number this device is running.  
+    ### We need this to figure out which oid to use to get
+    ### interface descriptions and which
     ### MIBs are supported.
 
     $opts->{model} = "Nortel Passport 8600";
-    $opts->{vendor_soft_ver} = snmpUtils::get($snmp, $OIDS{'rcSysVersion'}. ".0");
+    $opts->{vendor_soft_ver} = get('rcSysVersion');
     $opts->{vendor_descr_oid} = "ifName";
     $opts->{sysDescr} .= "<BR>" . $opts->{vendor_soft_ver} . "<BR>" . $opts->{sysLocation};
     $opts->{class} = 'nortel';
@@ -128,7 +129,7 @@ sub discover {
     $opts->{chassisname} = 'Chassis-Nortel-Passport';
 
     # Default feature promotions for Nortel Devices
-    $opts->{usev2c} = 1 if ($opts->{req_usev2c});
+    $opts->{usev2c} = 1      if ($opts->{req_usev2c});
     $opts->{nortelbox} = 1;
     return;
 }
