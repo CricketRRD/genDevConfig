@@ -7,7 +7,15 @@ has been split up to use the standard CREDITS, CHANGES format and changelog
 is handled by the sourceforge cvs cricket.sourceforge.net
 
 ===============================================================================
-04/05/2005
+05/05/2005
+
+# Version 2_0_0beta11
+#
+# Major new features
+#
+# - added --nomtucheck and nospeedcheck for sanity checking overrides.
+# - Cleaned up Debug and Info output to be more readable.
+# - various internal changes, see cvs commit info.
 
 # Version 2_0_0beta10
 #
