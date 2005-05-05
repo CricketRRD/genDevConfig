@@ -259,6 +259,7 @@ graph    hrSystemNumUsers
     color     = dark-green
     draw-as   = AREA
     y-axis    = "Users"
+    scale     = 300,*
     units     = "Users"
     legend    = "# of Users"
     precision = integer
@@ -269,6 +270,7 @@ graph    hrSystemProcesses
     y-axis    = "Processes"
     units     = "Processes"
     legend    = "# of system Processes"
+    scale     = 300,*
     precision = integer
 
 graph    hrStorageUsed

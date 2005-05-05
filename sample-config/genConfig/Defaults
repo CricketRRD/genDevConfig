@@ -1018,6 +1018,7 @@ targetType	standard-interface-nu
 				ifInNUcastPackets, ifOutNUcastPackets"
 	view	=	"Octets: ifInOctets ifOutOctets,
 				UcastPackets: ifInUcastPackets ifOutUcastPackets,
+				NUcastPackets: ifInNUcastPackets ifOutNUcastPackets,
 				Errors: ifInErrors ifOutErrors"
 
 targetType	standard-interface-hc
@@ -1064,7 +1065,6 @@ targetType  cisco-interface
 				locIfInputQueueDrops, locIfOutputQueueDrops"
 	view	=	"Octets: ifInOctets ifOutOctets,
 				UcastPackets: ifInUcastPackets ifOutUcastPackets,
-				NcastPackets: ifInNUcastPackets ifOutNUcastPackets,
 				Collisions: locIfCollisions,
 				QueueDrops: locIfInputQueueDrops 
 				locIfOutputQueueDrops,
@@ -1080,7 +1080,7 @@ targetType  cisco-interface-nu
 				locIfInputQueueDrops, locIfOutputQueueDrops"
 	view	=	"Octets: ifInOctets ifOutOctets,
 				UcastPackets: ifInUcastPackets ifOutUcastPackets,
-				NcastPackets: ifInNUcastPackets ifOutNUcastPackets,
+				NUcastPackets: ifInNUcastPackets ifOutNUcastPackets,
 				Collisions: locIfCollisions,
 				QueueDrops: locIfInputQueueDrops 
 				locIfOutputQueueDrops,
