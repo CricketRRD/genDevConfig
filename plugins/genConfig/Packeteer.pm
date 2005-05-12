@@ -94,8 +94,14 @@ sub device_types {
 sub can_handle {
     my($self, $opts) = @_;
 
-    return (grep { $opts->{sysDescr} =~ m/$_/gi } @types)
-    #return (grep { $opts->{sysObjectID} =~ m/$_/gi } @types)
+    foreach my $type (@types) {
+        return ($opts->{sysDescr} =~ m/$type/gi)
+
+        # Example using OIDs instead of a string match
+        #$type =~ s/\./\\\./g; # Use this to escape dots for pattern matching
+        #return ($opts->{sysObjectID} =~ m/$type/gi)
+    }
+    return 0;
 
 }
 
