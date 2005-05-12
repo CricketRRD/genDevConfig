@@ -1,7 +1,8 @@
 # -*-perl-*-
-#    genRtrConfig plugin module
+#    genDevConfig plugin module
 #
 #    Copyright (C) 2002 Francois Mikus
+#    Copyright (C) 2005 CHIRP Project chirp.sourceforge.net.
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -32,7 +33,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.04;
+my $VERSION = 1.06;
 
 ### End package init
 
@@ -42,7 +43,7 @@ my $VERSION = 1.04;
 # the names should be contained in the sysdescr string
 # returned by the devices. The name is a regular expression.
 ###############################################################################
-my @types = ( 'Foundry',
+my @types = ( '1.3.6.1.4.1.1991', # Foundry Generic
             );
 
 ###############################################################################
@@ -61,13 +62,36 @@ my %OIDS = (
        ### from FOUNDRY-SN-ROOT-MIB
        ### foundry.products.switch.snAgentSys.snAgentGbl...
 
-       'snAgBuildVer'                => '1.3.6.1.4.1.1991.1.1.2.1.49',
+       'snAgBuildVer'				=> '1.3.6.1.4.1.1991.1.1.2.1.49',
+
+       'snL4VirtualServerTable'			=> '1.3.6.1.4.1.1991.1.1.4.2.1.1',
+       'snL4RealServerTable'			=> '1.3.6.1.4.1.1991.1.1.4.3.1.1',
+
+       'snL4VirtualServerPortTable'		=> '1.3.6.1.4.1.1991.1.1.4.4.1.1',
+       'snL4RealServerPortTable'		=> '1.3.6.1.4.1.1991.1.1.4.5.1.1',
+
       );
 
 ###############################################################################
 ### Private variables
 ###############################################################################
 
+my %types = ( '1.3.6.1.4.1.1991.1.3.3.1' =>  'ServerIron',
+	      '1.3.6.1.4.1.1991.1.3.3.2' =>  'ServerIron XL',
+	      '1.3.6.1.4.1.1991.1.3.3.2' =>  'ServerIron XLTCS',
+              '1.3.6.1.4.1.1991.1.3.18.1' => 'ServerIron 400',
+	      '1.3.6.1.4.1.1991.1.3.19.1' =>  'ServerIron 800',
+	      '1.3.6.1.4.1.1991.1.3.20.1' =>  'ServerIron 1500',
+	      '1.3.6.1.4.1.1991.1.3.5.4' =>  'ServerIronXLG',
+	      '1.3.6.1.4.1.1991.1.3.5.1' =>  'TurboIron8',
+	      '1.3.6.1.4.1.1991.1.3.6.2' =>  'BigIron 4000',
+	      '1.3.6.1.4.1.1991.1.3.7.2' =>  'BigIron 8000',
+            );
+
+my $script = "Foundry genDevConfig module";
+
+###############################################################################
+# These are the OIDS used by this plugin
 # none
 
 #-------------------------------------------------------------------------------
@@ -89,9 +113,7 @@ sub device_types {
 
 sub can_handle {
     my($self, $opts) = @_;
-
-    return (grep { $opts->{sysDescr} =~ m/$_/gi } @types)
-
+    return (grep { $opts->{sysObjectID} =~ m/$_/gi } @types)
 }
 
 #-------------------------------------------------------------------------------
@@ -115,29 +137,32 @@ sub discover {
     ### MIBs are supported.
     ###
 
-    if ($opts->{sysDescr} =~ /Foundry/) {
+    # Default feature promotions for Foundry Devices
+    $opts->{foundrybox} = 1	if ($opts->{req_vendorbox});
+    $opts->{namedonly} = 1	if ($opts->{req_namedonly});
+    $opts->{usev2c} = 1		if ($opts->{req_usev2c});
+    $opts->{model} = 'Foundry-Generic';
+    $opts->{chassisttype} = 'Chassis-Foundry-Generic';
+    $opts->{chassisname} = 'Chassis-Foundry';
+    $opts->{vendor_soft_ver}  = get('snAgBuildVer');
+    $opts->{model} = 'Foundry-Generic';
+    
+    if ($types{$opts->{sysObjectID}} =~ /^BigIron/) {
+        $opts->{model} = 'Foundry-BigIron';
+        $opts->{vendor_soft_ver}  = ''; # get('snAgBuildVer'); Find out what MIB for BigIron
+        # Model specific feature promotions for Foundry Devices
 
-        $opts->{model} = 'Foundry-Generic';
+    } elsif ($types{$opts->{sysObjectID}} =~ /^TurboIron/) {
+        $opts->{model} = 'Foundry-ServerIron';
+        # Model specific feature promotions for Foundry Devices
 
-        ($opts->{vendor_soft_ver})  = snmpUtils::get($opts->{snmp}, $OIDS{'snAgBuildVer'});
-        $opts->{vendor_descr_oid} = 'ifAlias';
-        # $opts->{vendor_descr_oid} = 'snSwPortName';
-
-        # if $opts->{vendor_soft_ver} ge "???";
-
-        # Default feature promotions for Foundry Devices
-        $opts->{foundrybox} = 1    if ($opts->{req_vendorbox});
-        $opts->{foundryint} = 1    if ($opts->{req_vendorint});
-        $opts->{extendedint} = 0      if ($opts->{req_extendedint});
-        $opts->{namedonly} = 1     if ($opts->{req_namedonly});
+    } elsif ($types{$opts->{sysObjectID}} =~ /^ServerIron/) {
+        $opts->{model} = 'Foundry-ServerIron';
+        # Model specific feature promotions for Foundry Devices
     }
 
-    if ($opts->{foundrybox}){ # Default Foundry config
-        $opts->{chassisttype} = 'Foundry-Generic-Router';
-        $opts->{chassisname} = 'Chassis-Foundry';
-        $opts->{usev2c} = 1 if ($opts->{req_usev2c});
-    }
-
+    $opts->{vendor_descr_oid} = 'ifAlias';
+    # $opts->{vendor_descr_oid} = 'snSwPortName';
 
     return;
 }
@@ -164,7 +189,98 @@ sub custom_targets {
     ### START DEVICE CUSTOM CONFIG SECTION
     ###
 
+    if ($opts->{model} =~ /ServerIron/) {
+        my $targetname = 'slb_summary';
+        $file->writetarget($targetname, '',
+                        'interface-name' => $targetname,
+                        'long-desc'      => "Total L4SLB conn statistics for $opts->{router}",
+                        'short-desc'     => "Total L4SLB conn stats for $opts->{router}",
+                        'target-type'    => 'foundryL4SLB',
+                        'order'          => $opts->{order},
+                    );
+        $opts->{order} -= 1;
+    }
 
+    my %snL4RealServerTable = gettable('snL4RealServerTable');
+    my %snL4VirtualServerTable = gettable('snL4VirtualServerTable');
+    my %snL4VirtualServerPortTable = gettable('snL4VirtualServerPortTable');
+    my %snL4RealServerPortTable = gettable('snL4RealServerPortTable');
+
+    my %virtuals;
+    my %reals;
+    my $result;
+    if ($opts->{model} =~ /ServerIron/) {
+    $result = rehash (%snL4RealServerTable);
+
+    foreach my $row (sort keys %{$result}) {
+    	my ($servername, $serverip, $adminstate) = ($result->{$row}->{2}, $result->{$row}->{3}, $result->{$row}->{4});
+    	next unless (defined $adminstate && $adminstate == 1);
+        my $targetname = 'slb_' . $serverip;
+    	$file->writetarget($targetname, '',
+                        'interface-name' => $servername,
+                        'long-desc'      => "Real Server $servername ($serverip)",
+                        'short-desc'     => "Real Server $servername",
+                        'target-type'    => 'foundry-real-server',
+                        'order'          => $opts->{order},
+                    );
+        $opts->{order} -= 1;
+        $reals{$servername} = $serverip;
+    }
+
+    $result = rehash (%snL4VirtualServerTable);
+  
+  
+  foreach my $row (sort keys %{$result}) {
+    my ($servername, $serverip, $adminstate) = ($result->{$row}->{2}, $result->{$row}->{3}, $result->{$row}->{4});
+    next unless (defined $adminstate && $adminstate == 1);
+        my $targetname = 'slb_' . $serverip;
+    	$file->writetarget($targetname, '',
+                        'interface-name' => $servername,
+                        'long-desc'      => "Virtual Server $servername ($serverip)",
+                        'short-desc'     => "Virtual Server $servername",
+                        'target-type'    => 'foundry-virtual-server',
+                        'order'          => $opts->{order},
+                    );
+        $opts->{order} -= 1;
+    $virtuals{$servername} = $serverip;
+  }
+  
+  $result = rehash (%snL4RealServerPortTable);
+  
+  foreach my $row (sort keys %{$result}) {
+    my ($servername, $serverport, $adminstate) = ($result->{$row}->{2}, $result->{$row}->{3}, $result->{$row}->{4});
+    my ($serverport1) = ($serverport == "65535")?"default":$serverport;
+    next unless (defined $adminstate && $adminstate == 1);
+    my $serverip = $reals{$servername};
+    my $targetname = 'slb_' . $serverip . '.' . $serverport1;
+    $file->writetarget($targetname, '',
+                        'interface-name' => $servername,
+                        'long-desc'      => "Real Server $servername ($serverip) Port $serverport1",
+                        'short-desc'     => "Real Server $servername-$serverport1",
+                        'target-type'    => 'foundry-real-server-port',
+                        'order'          => $opts->{order},
+                    );
+    $opts->{order} -= 1;
+  }
+  
+    $result = rehash (%snL4VirtualServerPortTable);
+  
+  foreach my $row (sort keys %{$result}) {
+    my ($servername, $serverport, $adminstate) = ($result->{$row}->{2}, $result->{$row}->{3}, $result->{$row}->{4});
+    my ($serverport1) = ($serverport == "65535")?"default":$serverport;
+    next unless (defined $adminstate && $adminstate == 1);
+    my $serverip = $virtuals{$servername};
+    my $targetname = 'slb_' . $serverip . '.' . $serverport1;
+    $file->writetarget($targetname, '',
+                        'interface-name' => $servername,
+                        'long-desc'      => "Virtual Server $servername ($serverip) Port $serverport1",
+                        'short-desc'     => "Virtual Server $servername-$serverport1",
+                        'target-type'    => 'foundry-virtual-server-port',
+                        'order'          => $opts->{order},
+                    );
+    $opts->{order} -= 1;
+  }
+}
     ###
     ### END DEVICE CUSTOM CONFIG SECTION
     ###
@@ -209,19 +325,6 @@ sub custom_interfaces {
     ###
     ### START DEVICE CUSTOM INTERFACE CONFIG SECTION
     ###
-
-    if ($opts->{foundryint}) {
-
-        ### Collect extra stats from the Foundry MIB
-
-        #Check if NU Cast packet statistics are required
-        my ($nu) = $opts->{nustats} ? '-nu' : '';
-	
-        # Apply logic for filtering option --gigonly interfaces
-        next if ($opts->{gigonly} && int($ifspeed{$index}) != 1000000000 );
-
-        push(@config, 'target-type' => 'foundry-interface' . $nu . $hc);
-    }
 
     ###
     ### END INTERFACE CUSTOM CONFIG SECTION
@@ -275,4 +378,15 @@ sub custom_files {
     $data->{wmatch}  = $wmatch;
 }
 
+sub rehash (@) {
+  my %a = @_;
+  my $b = {};
+  my $row;
+
+  foreach my  $index (keys %a) {
+    my ($i, $j) = split (/\./, $index, 2);
+    $b->{$j}->{$i} = $a{$index};
+  }
+  return $b;
+}
 1;
