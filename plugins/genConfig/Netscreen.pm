@@ -36,19 +36,31 @@ my $VERSION = 1.06;
 
 ### End package init
 
-# These are device types we can handle in this plugin
-# the names should be contained in the sysdescr string
-# returned by the devices. The name is a regular expression.
-
-my @types = ( 'Net[sS]creen-\d+',
-            );
-
 # These are the OIDs used by this plugin
 # the OIDs should only be those necessary for index mapping or
 # recognizing if a feature is supported or not by the device.
 
 my %OIDS = ('nsIdsAttkMonSynAttk' => '1.3.6.1.4.1.3224.3.2.1.3'
            );
+
+###############################################################################
+# These are device types we can handle in this plugin
+# the names should be contained in the sysdescr string
+# returned by the devices. The name is a regular expression.
+###############################################################################
+
+my @types = ( 'Net[sS]creen-\d+',
+            );
+
+###############################################################################
+#### Private variables
+################################################################################
+
+my $snmp;
+my $req_fwstats = 1; # Default is always provide these stats.
+my $fwstats;
+my $script = "Netscreen genDevConfig module";
+
 
 ###############################################################################
 # device_types
@@ -60,6 +72,12 @@ sub device_types {
    my $self = shift;
    return \@types;
 }
+
+#-------------------------------------------------------------------------------
+# can_handle
+# IN : opts reference
+# OUT: returns a true if the device can be handled by this plugin
+#-------------------------------------------------------------------------------
 
 sub can_handle {
     my($self, $opts) = @_;
@@ -87,13 +105,15 @@ sub discover {
 
     $opts->{model} = 'Netscreen';
     $opts->{class} = 'netscreen';
-    $opts->{netscreenfirewall} = 1;
-    $opts->{extended} = 0    if ($opts->{req_extended});
 
     if ($opts->{model} eq "Netscreen") {
         $opts->{chassisttype} = 'Netscreen-Firewall';
         $opts->{chassisname} = 'Chassis-Netscreen';
     }
+
+    # Default feature promotions
+    $fwstats = 1		if ($req_fwstats);
+    $opts->{extended} = 0	if ($opts->{req_extended});
 
     ###
     ### END DEVICE DISCOVERY SECTION
@@ -117,7 +137,7 @@ sub custom_targets {
     ### DEVICE CUSTOM CONFIG SECTION
     ###
 
-    if ($opts->{netscreenfirewall}) {
+    if ($fwstats) {
 
         my ($ldesc, $sdesc);
         $ldesc = "Number of active and failed sessions for the entire firewall";
