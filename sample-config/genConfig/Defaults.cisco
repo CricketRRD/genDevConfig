@@ -60,7 +60,8 @@ OID     rttMonLatestHTTPOperDNSRTT            1.3.6.1.4.1.9.9.42.1.5.1.1.2
 OID     rttMonLatestHTTPOperTCPConnectRTT     1.3.6.1.4.1.9.9.42.1.5.1.1.3
 OID     rttMonLatestHTTPOperTransactionRTT    1.3.6.1.4.1.9.9.42.1.5.1.1.4
 OID     rttMonLatestHTTPOperSense             1.3.6.1.4.1.9.9.42.1.5.1.1.6
-
+OID	rttMonLatestJitterOperRTTMin          1.3.6.1.4.1.9.9.42.1.5.2.1.4
+OID	rttMonLatestJitterOperRTTMax          1.3.6.1.4.1.9.9.42.1.5.2.1.5
 
 # OIDS For Altiga VPN Concentrators 3030 3060
 
@@ -248,7 +249,14 @@ datasource   rttMonLatestHTTPOperSense
 	rrd-ds-type	=	GAUGE
         ds-source       =       snmp://%snmp%/rttMonLatestHTTPOperSense.%inst%
 
-# Datasources for Altiga VPN 3030 and 3060 boxes
+datasource   rttMonLatestJitterOperRTTMin
+	rrd-ds-type	=	GAUGE
+	ds-source	=	snmp://%snmp%/rttMonLatestJitterOperRTTMin.%inst%
+datasource   rttMonLatestJitterOperRTTMax
+	rrd-ds-type	=	GAUGE
+	ds-source	=	snmp://%snmp%/rttMonLatestJitterOperRTTMax.%inst%
+
+#Datasources for Altiga VPN 3030 and 3060 boxes
 
 datasource vpnCPUtemp
 	rrd-ds-type	=	GAUGE
@@ -643,6 +651,17 @@ targetType      saa-http
 	view	=	"rttHttp: rttMonLatestHTTPOperRTT rttMonLatestHTTPOperSense 
                                     rttMonLatestHTTPOperTCPConnectRTT rttMonLatestHTTPOperDNSRTT,
                          rttPreHttp: rttMonLatestHTTPOperTCPConnectRTT rttMonLatestHTTPOperSense rttMonLatestHTTPOperDNSRTT"
+
+targetType	saa-udpecho
+	ds	=	"rttMonLatestRttOperCompletionTime, rttMonLatestRttOperSense"
+	view	=	"rttAgent: rttMonLatestRttOperCompletionTime rttMonLatestRttOperSense"
+
+targetType	saa-jitter
+	ds	=	"rttMonLatestRttOperCompletionTime, rttMonLatestRttOperSense,
+			 rttMonLatestJitterOperRTTMin, rttMonLatestJitterOperRTTMax"
+	view	=	"rttAgent: rttMonLatestRttOperCompletionTime rttMonLatestJitterOperRTTMin
+			 tJitterOperRTTMin rttMonLatestJitterOperRTTMax
+			 rttMonLatestRttOperSense"
 
 ### PIX NUmber of connections gloabally
 
@@ -1083,6 +1102,29 @@ graph rttMonLatestRttOperSense
     units       =   "RTT operational value"
     inf-marker  =   true
     y-min	=   0
+graph rttMonLatestJitterOperRTTMin
+    color	=   blue
+    draw-as	=   LINE2
+    legend	=   "Min RTT to remote router"
+    y-axis	=   "Milliseconds"
+    inf-marker	=   true
+    units	=   "ms"
+    y-min	=   0
+    show-max	=   true
+    max-color	=   neongrn
+    draw-max-as	=   LINE1
+
+graph rttMonLatestJitterOperRTTMax
+    color	=   blue
+    draw-as	=   LINE2
+    legend	=   "Max RTT to remote router"
+    y-axis	=   "Milliseconds"
+    inf-marker	=   true
+    units	=   "ms"
+    y-min	=   0
+    show-max	=   true
+    max-color	=   neongrn
+    draw-max-as	=   LINE1
 
 # Cisco Chassis
 graph   cpu1min

@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.11;
+my $VERSION = 1.12;
 
 ### End package init
 
@@ -52,7 +52,9 @@ my @types = ( 'IOS ',
 ###############################################################################
 
 my (%rttAgentType) = ( '2' =>  'saa-rtt',
+                       '3' => 'saa-udpecho',
                        '25' => 'saa-http',
+                       '27' => 'saa-jitter',
                        '30' => 'saa-ftp'
                      ); 
 
