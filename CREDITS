@@ -7,6 +7,7 @@ The genDevConfig script is based on the hard work of:
   * Cricket 0.71 listInterface by Jeff Allen
   * genRtrConfig 1.4 by Mike Fisher
   * genCatConfig 1.4 by Mike Fisher
+  * CHIRP 1.0 by ???
 
 It was initially developped and integrated by Mike Fisher, who released the
 first public version of genRtrConfig on sourceforge (version 1.4).

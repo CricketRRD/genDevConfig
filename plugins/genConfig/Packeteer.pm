@@ -55,15 +55,19 @@ my %OIDS = (
 ################################################################################
 my @types = ( "Packeteer");
 
+# Examples
+# my @types = ( "$OIDS{'RapidCityMIB'}", # Nortel Accelar sysObjectID
+#             );
+# my @types = ('1.3.6.1.4.1.1991', # Foundry Generic sysObjectID
+#             );
+# my @types = ('^VendorName\d\d$', # Example of simple regex
+#             );
 
 ###############################################################################
 ### Private variables
 ###############################################################################
 
 my $snmp;
-
-my $req_pixconn = 1; # Enabled by default
-my $pixconn;
 
 my $script = "Packeteer genDevConfig Module";
 
@@ -91,6 +95,7 @@ sub can_handle {
     my($self, $opts) = @_;
 
     return (grep { $opts->{sysDescr} =~ m/$_/gi } @types)
+    #return (grep { $opts->{sysObjectID} =~ m/$_/gi } @types)
 
 }
 
@@ -118,15 +123,23 @@ sub discover {
 
     ### PACKETEER GENERIC SECTION
     
-    $opts->{model} = 'Packeteer';
-    $opts->{class} = 'packeteer';
-    $opts->{chassisttype} = 'Generic-Device';
-    $opts->{chassisname} = 'Chassis-Packeteer';
+    $opts->{model} = 'packeteer'; # Informational for plugin not included in cricket config
+    $opts->{class} = 'packeteer'; # Informational for Chassis target useful for Rancid integration
+    $opts->{chassisttype} = 'Generic-Device'; # targetType of Chassis target
+    $opts->{chassisname} = 'Chassis-Packeteer'; # name of Chassis target
 
+    # Example of additional info to add to sysDescr
     #$opts->{vendor_soft_ver} = get('versionOID');
+    #$opts->{sysDescr} .= "<BR>" . $opts->{vendor_soft_ver};
 
+    # Example of forcing descr_oid used to get interface descriptions
+    #$opts->{vendor_descr_oid} = "ifName";
+
+    ### Insert IF/ELSIF block to modify generic options based on $opts->{model}
+    #
+    ###
+  
     # Default feature promotions for Packeteer
-    $opts->{packeteerbox} = 1;
     $opts->{chassiscollect} = 0; # Do not collect any stats on the chassis. No OIDs defined. :-(
 
     return;
@@ -154,12 +167,32 @@ sub custom_targets {
     ### START DEVICE CUSTOM CONFIG SECTION
     ###
 
-    ### CAR Traffic shaping stats for packeteer
-    ###
+    # Simple example of writing out a target
+    #
+    # my $someOID = get('someOID');
+    # my $ldesc = "Total number of widgets for card $someOID";
+    # my $sdesc = "Total number of widgets for card $someOID";
+    # $targetname = 'packeteer-cardinfo';
+    # 
+    # $file->writetarget($targetname, '',
+    #                ('display-name' => $targetname,
+    #                # Essential for cricktet to collect the stats
+    #                'target-type'  => 'packeteer-special-target',
+    #                'short-desc'     => $sdesc,
+    #                'long-desc'      => $ldesc,
+    #                'order'          => $opts->{order},
+    #                #Optional
+    #                'inst'           => 0 # You could reference an index or a map
+    #                ) );
+    # # Decrease the order in which each target appears
+    # $opts->{order} -= 1;
+
+
+    # CAR Traffic shaping stats for packeteer
 
     my %classFullName;
     my %partitionMinimumBps;
-    if ($opts->{packeteerbox}) {
+    if ($opts->{model} =~ /packeteer/) {
         %classFullName = gettable('classFullName');
         %partitionMinimumBps = gettable('partitionMinimumBps');
     }
@@ -253,7 +286,27 @@ sub custom_interfaces {
     ###
     ### START DEVICE CUSTOM INTERFACE CONFIG SECTION
     ###
-    
+
+    # Example of processing special cases for interfaces
+    # Special cases are tried first then processing falls back
+    # on standard/extended MIB-II statistics.
+    #
+    #if ($iftype{$index} == 32 &&  $ifdescr{$index} =~ /\.\d+$/) {
+
+    #     push(@config, 'target-type' => 'packeteer-sub-interface' . $hc);
+    #     # Override runtime data for the mtu of this interface
+    #     $ifmtu{$index} = 1 if (!defined($ifmtu{$index}) || $ifmtu{$index} == 0);
+    #     # tell the main script that you the plugin did process this interface
+    #     $match = 1;
+
+    #} elsif ($opts->{packeteerint}) {
+    #     # Check if NU Cast packet statistics are requested
+    #     my ($nu) = $opts->{nustats} ? '-nu' : '';
+    #     push(@config, 'target-type' => 'packeteer-interface'. $nu . $hc);
+    #     $match = 1;
+    #}
+
+
     ###
     ### END INTERFACE CUSTOM CONFIG SECTION
     ###
