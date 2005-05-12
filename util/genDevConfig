@@ -61,7 +61,7 @@ use ConfigTree::Cache;      ### Used for monitor threshold processing
 
 # Common::Log::setFormat('extended');
 
-my $VERSION = 'genDevConfig 2.0.0beta11';
+my $VERSION = 'genDevConfig 2.0.0beta12';
 
 ###############################################################################
 

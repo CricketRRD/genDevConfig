@@ -7,6 +7,20 @@ has been split up to use the standard CREDITS, CHANGES format and changelog
 is handled by the sourceforge cvs cricket.sourceforge.net
 
 ===============================================================================
+11/05/2005
+
+# Version 2_0_0beta12
+#
+# Major new features
+#
+# - Now uses GetOpts::Long module for args processing. 
+#   Much more robust options matching.
+# - Brand new Foundry plugin based on CHIRP ServerIron plugin
+# - FIX: NortelAccelar plugin now recognizes devices correctly.
+# - Defaults have been cleaned up commented and split by vendor.
+#   It should now be much, much easier to understand what is going on!
+# - Many, many, many internal changes.
+
 05/05/2005
 
 # Version 2_0_0beta11
