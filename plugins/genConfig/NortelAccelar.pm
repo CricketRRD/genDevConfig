@@ -94,7 +94,7 @@ sub device_types {
 sub can_handle {
     my($self, $opts) = @_;
 
-    return (grep { $opts->{sysDescr} =~ m/$_/gi } @types)
+    return (grep { $opts->{sysObjectID} =~ m/$_/gi } @types)
 
 }
 
