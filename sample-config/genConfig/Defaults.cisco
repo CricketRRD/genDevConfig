@@ -799,12 +799,7 @@ targetType cisco-vip-cpu
 
 monitorType Chassis
     monitor-thresholds = 
-        "cpu5min:value:n:75:META:router-cpu:dark-red:SPAN:3,
-         cpu5min:value:n:1:META:router-cpu:yellow:SPAN:3"
-
-monitorType cisco-interface
-    monitor-thresholds = 
-        "cpu5min:value:n:75:META:router-cpu:dark-red:SPAN:3,
+        "cpu5min:value:n:75:META:router-cpu:red:SPAN:3,
          cpu5min:value:n:1:META:router-cpu:yellow:SPAN:3"
 
 
