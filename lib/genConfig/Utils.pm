@@ -68,7 +68,7 @@ sub fmi {
 sub translateRttTargetAddr {
     my ($type, $value) = @_;
     return ("unknown") if (($type ne "saa-rtt") &&
-                           ($type ne "saa-udpecho") &&;
+                           ($type ne "saa-udpecho") &&
                            ($type ne "saa-jitter"));
     $value = inet_ntoa($value);
     Debug("TranslateRttTarget: $value");
