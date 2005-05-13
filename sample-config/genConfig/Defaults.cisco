@@ -1102,6 +1102,7 @@ graph rttMonLatestRttOperSense
     units       =   "RTT operational value"
     inf-marker  =   true
     y-min	=   0
+
 graph rttMonLatestJitterOperRTTMin
     color	=   blue
     draw-as	=   LINE2
