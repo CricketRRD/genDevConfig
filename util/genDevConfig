@@ -514,12 +514,10 @@ my %opts = (
 
     'req_bytes'     => 0, # Always use bits by default
     'req_vendorbox' => 1, # always request chassis stats(temp, cpu, mem)
-    'nortelbox'     => 0,
     'ciscobox'      => 0,
-    'packeteerbox'  => 0,
-    'foundrybox'    => 0,
-    'juniperbox'    => 0,
-    'contivitybox'  => 0,
+    'juniperbox'      => 0,
+    'req_contivitytunnels' => 1,
+    'contivitytunnels' => 0,
     'req_getconfig' => 0,
     'getconfig'     => 0,
     'req_usev2c'    => 0,
@@ -803,7 +801,7 @@ if ($opts{sysObjectID} eq 'enterprises.9.1.525' ||
 if ($opts{sysDescr} =~ /^CES\s/) {
 
     $opts{model} = 'Contivity-Generic';
-    $opts{contivitybox} = 1    if ($opts{req_vendorbox});
+    $opts{contivitytunnels} = 1    if ($opts{req_contivitytunnels});
     $opts{class} = 'nortel';
 }
 
@@ -1411,7 +1409,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         push(@config, 'target-type' => 'sub-interface' . $hc);
         $match = 1;
 
-    } elsif ($opts{contivitybox} && $iftype{$index} == 131) {
+    } elsif ($opts{contivitytunnels} && $iftype{$index} == 131) {
 
         ### Contivity IPSec tunnel - change target name and set speed to no zero value
 
@@ -1605,7 +1603,6 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         $c="# ";
         Debug (" Skipping < 1000Mbit interfaces, do not use --gigonly to see them.");
    } elsif ((!defined($speed) || $speed == 0) && !$opts{nospeedcheck}) {
-         #!($iftype{$index} == 103 || $iftype{$index} == 104 ) && !$opts{nortelbox}) {
         $header .= "\n### - Has zero or insane speed.\n";
         $c="# ";
         Debug (" Has zero or insane Speed");
@@ -1654,7 +1651,8 @@ $c="# ";
 
     ###
     ### Add the monitor thresholds for the interface target-type
-    ###
+    ### Temporary hack until, the monitor threshold expansion problem
+    ### is resolved.
 
     my %tmpconfig = @config;
     push(@config,
