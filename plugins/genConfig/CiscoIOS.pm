@@ -779,8 +779,8 @@ sub custom_interfaces {
         if ($opts->{framestats} && ($ifdescr{$index} =~ /\.\d+$/) &&
 	exists $cfrExtCircuitSubifIndex{$index}) {
 
-            if (defined $opts{vendor_soft_ver} &&
-	       ($opts{vendor_soft_ver} lt "11.1") &&
+            if (defined $opts->{vendor_soft_ver} &&
+	       ($opts->{vendor_soft_ver} lt "11.1") &&
 	       !defined $intdescr{$index}) {
 
                ###  This is a frame-relay sub-interface *and* the router
