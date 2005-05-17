@@ -165,8 +165,8 @@ sub discover {
 		Info("Found an JUNOS device: model: $opts->{model}");
 	}
 
-	$opts->{chassisttype} = 'Juniper-Generic';
-	$opts->{chassisname} = 'Chassis-Juniper';
+	$opts->{chassisttype} = 'juniper-generic';
+	$opts->{chassisname} = 'chassis-juniper';
 	$opts->{usev2c} = 1 if ($opts->{req_usev2c});
 
 	# Default feature promotions for JUNOS Devices
@@ -176,7 +176,9 @@ sub discover {
         $opts->{class} = 'juniper';
 
 	# Don't create default chassis target
-	$opts->{chassisstats} = 0;
+	#$opts->{chassisstats} = 0;
+        # Note from Francois Mikus. Do create it! This is where
+	# we store all user configurable options. Even if no DS's are collected.
 
 	return;
 }

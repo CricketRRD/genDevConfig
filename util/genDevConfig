@@ -1615,7 +1615,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         $header .= "\n#### - Has no name and --namedonly specified.\n";
         $c="# ";
         Debug (" speed: $speed_str mtu: $ifmtu{$index} Unnamed Rejected, & --namedonly");
-    } elsif ($opts{ciscobox} && $ifdescr{$index} =~ /ATM[\d\/]+\.??0\-aal5\slayer/ && $iftype{$index} == '49'
+    } elsif ($ifdescr{$index} =~ /ATM[\d\/]+\.??0\-aal5\slayer/ && $iftype{$index} == '49'
        || $ifdescr{$index} =~ /Virtual-(Access|Template)|ATM[\d\/]+-(interleave)|Bearer Channel/) {
        $header .= "\n#### - Interface either has no valid SNMP counters or is dynamic.\n";
 $c="# ";

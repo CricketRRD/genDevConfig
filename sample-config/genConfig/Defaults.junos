@@ -243,6 +243,9 @@ targetType	juniper-atm-interface-hc
 				ATMOutDrops: jnxAtmIfOutVCQueueDrops
 				ATMInErr: jnxAtmIfInNoBufferOAMCells jnxAtmIfInNoBufDropPkts jnxAtmIfInInvalidVCCells jnxAtmIfInBadCrcs jnxAtmIfInLenErrPkts jnxAtmIfInTimeoutPkts"
 
+targetType	juniper-generic
+# Empty target used to store user provided information.
+
 targetType	juniper-chassis-backplane
 	ds		=	"jnxOperatingTemp"
 	view		=	"Temp: jnxOperatingTemp"
