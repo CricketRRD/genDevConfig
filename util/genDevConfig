@@ -1213,18 +1213,6 @@ my %collect;
 
 foreach $index (keys %ifdescr) {
 
-    if ($opts{ciscobox} && defined $opts{vendor_soft_ver}
-    && ($opts{vendor_soft_ver} lt "11.1" && $iftype{$index} == '32')
-    && !defined $intdescr{$index}) {
-
-        ###  This is a frame-relay sub-interface *and* the router
-        ###  is running an IOS older than 11.1. Therefore, we can
-        ###  get neither ifAlias nor ciscoLocIfDesc. Do something
-        ###  useful.
-
-        $intdescr{$index} = "Cisco PVCs descriptions require IOS 11.1+.";
-    }
-
     ## Slot/Port Collection Mapping. If a slot/port is in the user defined
     ## %collectable hash then enable it in the %collect hash. If it is not defined
     ## In the %collectable hash, then disable it in the %collect hash. The %collect

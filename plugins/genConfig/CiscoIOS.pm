@@ -732,8 +732,8 @@ sub custom_interfaces {
 
     # Saving local copies of runtime data
     my %ifspeed    = %{$data->{ifspeed}};
-    my %ifdescr    = %{$data->{ifdescr}};
-    my %intdescr   = %{$data->{intdescr}};
+    my %ifdescr    = %{$data->{ifdescr}}; # What is used for processing
+    my %intdescr   = %{$data->{intdescr}}; # What is displayed for an interface
     my %iftype     = %{$data->{iftype}};
     my %ifmtu      = %{$data->{ifmtu}};
     my %slotPortMapping   = %{$data->{slotPortMapping}};
@@ -776,9 +776,20 @@ sub custom_interfaces {
         ### interface index, so that's what we need from the instance map)
         ### Otherwise set the interface as a simple sub-interface.
 
-        if ($opts->{framestats} && ($ifdescr{$index} =~ /\.\d+$/)  &&
-            exists $cfrExtCircuitSubifIndex{$index}) {
+        if ($opts->{framestats} && ($ifdescr{$index} =~ /\.\d+$/) &&
+	exists $cfrExtCircuitSubifIndex{$index}) {
 
+            if (defined $opts{vendor_soft_ver} &&
+	       ($opts{vendor_soft_ver} lt "11.1") &&
+	       !defined $intdescr{$index}) {
+
+               ###  This is a frame-relay sub-interface *and* the router
+               ###  is running an IOS older than 11.1. Therefore, we can
+               ###  get neither ifAlias nor ciscoLocIfDesc. Do something
+               ###  useful.
+               $intdescr{$index} = "Cisco PVCs descriptions require IOS 11.1+.";
+            }
+        
             my $dspname = $ifdescr{$index};
             my ($mainif, $dlci);
             ($mainif, $dlci) = split(/\./, $cfrExtCircuitSubifIndex{$index});
@@ -796,7 +807,6 @@ sub custom_interfaces {
             $match = 1;
         }
         $opts->{nomtucheck} = 1;
-	#$ifmtu{$index} = 1 if (!defined($ifmtu{$index}) || $ifmtu{$index} == 0);
 
     }  elsif ($opts->{ciscoint}) {
 
