@@ -237,8 +237,8 @@ sub custom_targets {
 
     my $file = $opts->{'file'};
 
-    $file->writetarget("$opts->{router}_system", '',
-		       'display-name'   => '%router%  OS environment',
+    $file->writetarget("$opts->{devicename}_system", '',
+		       'display-name'   => '%devicename%  OS environment',
 		       'target-type'    => 'hr_System',
 		       'inst'           => '',
 		       'order'          => $opts->{order}--,

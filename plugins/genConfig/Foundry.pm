@@ -200,8 +200,8 @@ sub custom_targets {
         my $targetname = 'slb_summary';
         $file->writetarget($targetname, '',
                         'interface-name' => $targetname,
-                        'long-desc'      => "Total L4SLB conn statistics for $opts->{router}",
-                        'short-desc'     => "Total L4SLB conn stats for $opts->{router}",
+                        'long-desc'      => "Total L4SLB conn statistics for $opts->{devicename}",
+                        'short-desc'     => "Total L4SLB conn stats for $opts->{devicename}",
                         'target-type'    => 'foundryL4SLB',
                         'order'          => $opts->{order},
                     );

@@ -545,7 +545,7 @@ my %opts = (
     'vendor_descr_oid' => '', ### Vendor specific OID for interface descriptions
     'vendor_soft_ver'  => '', ### Vendor specific software version (IOS, CatOS, etc..)
     'vendor_soft_oid'  => '', ### Vendor specific software version (IOS, CatOS, etc..)
-    'router'           => '', ### Router name taken from the command-line
+    'devicename'           => '', ### Device name taken from the command-line
 
     ###
     ### Non-Sticky variables. 
@@ -666,8 +666,8 @@ usage() if (@ARGV != 1);
 # Set it to the optional user defined level
 Common::Log::setLevel($opts{logLevel});
 
-$opts{router} = $ARGV[0];
-snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+$opts{devicename} = $ARGV[0];
+snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
 
 ###########################################################################
 ###
@@ -845,8 +845,6 @@ if ($opts{req_vlans}) {
 # chassisinst        = The name of the function used to map the inst number
 #                      of the OID used for collecting chassis statistics.
 #
-#               Note that the ttype for all other things(interface, agents, wireless, etc)
-#               will have datasources *and* thresholds applied based on the ttype.
 
 if ($opts{chassisstats}) {
     Info("Current model: $opts{model}");
@@ -875,7 +873,7 @@ if ($opts{chassisstats}) {
     # rules based on model type.
     if (!$opts{usev2c}) {
 	    $opts{snmp_ver} = '1';
-	    snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+	    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
     }
 
     Info ("Model: $opts{model}");
@@ -933,13 +931,13 @@ my %ipadentif       = gettable('ipAdEntIfIndex');
 
 my %ifHCInOctets;
 if ($opts{usev2c}) {
-    snmp_def($opts{router}, $opts{community}, '2c');
+    snmp_def($opts{devicename}, $opts{community}, '2c');
     %ifHCInOctets    = gettable('ifHCInOctets');
     # Reset to default snmp v1
-    snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
 }
 
-### Get vendor specific Port/Slot Mapping
+### Create vendor specific Port/Slot Mapping variables
 
 # Global Mapping Hash
 my %slotPortMapping;
@@ -965,7 +963,7 @@ my $ipForwDatagrams = get('ipForwDatagrams');
 
 ### Create the target directory and targets file
 
-$opts{rdir} = subdir($opts{outputdir} . $opts{router}, $opts{lowercase});
+$opts{rdir} = subdir($opts{outputdir} . $opts{devicename}, $opts{lowercase});
 
 $file = $opts{file} = new genConfig::File("$opts{rdir}/targets");
 
@@ -985,15 +983,15 @@ Info ("Building Name to IP Adress Translation   ");
 
 # get numeric IP
 my $hbn;
-my $ip = "can't resolve '$opts{'router'}'";
+my $ip = "can't resolve '$opts{'devicename'}'";
 if (!$opts{'nodns'}) {
-    $hbn = gethostbyname($opts{'router'});
+    $hbn = gethostbyname($opts{'devicename'});
 } else {
-    $ip = $opts{'router'};
+    $ip = $opts{'devicename'};
 }
 
 if($hbn) {
-    $ip = inet_ntoa($hbn->addr) || "can't resolve '$opts{'router'}'";
+    $ip = inet_ntoa($hbn->addr) || "can't resolve '$opts{'devicename'}'";
 }
 
 Info ("......................... [DONE]");
@@ -1014,11 +1012,11 @@ if ($opts{refdefault}) {
 
 
 $file->writetarget('--default--', '',
-        'router'         => $opts{router},
+        'devicename'         => $opts{devicename},
         'directory-desc' => $opts{sysLocation},
         'short-desc'     => '',
         'long-desc'      => '%short-desc%',
-        'display-name'   => '%router%  %interface-name%',
+        'display-name'   => '%devicename%  %interface-name%',
         'ip'             => $ip,
         'interface-name' => '',
         'inst'           => 'map(interface-name)',
@@ -1033,7 +1031,7 @@ $file->writetarget('--default--', '',
 
 if ($opts{chassisstats}) {
 
-    # Use the pre-identified router type
+    # Use the pre-identified device type
 
     my ($ldesc, $sdesc);
     my ($inst) = 0;
@@ -1270,9 +1268,9 @@ if ($opts{req_modular}) {
     foreach my $slot (sort keys %slotList) {
         next if ($slot eq 'chassis');
         Debug(" modular:\$slot = $slot");
-        Debug(" modular:\$opts{router} = $opts{router}");
+        Debug(" modular:\$opts{devicename} = $opts{devicename}");
         Debug(" modular:\$slotNameList{$slot} = $slotNameList{$slot}");
-        my $_dir  = subdir($opts{outputdir} . "$opts{router}/$slotNameList{$slot}", $opts{lowercase});
+        my $_dir  = subdir($opts{outputdir} . "$opts{devicename}/$slotNameList{$slot}", $opts{lowercase});
         my $_file = new genConfig::File("$_dir/ports");
         $slotList{$slot} = $_file;
     }
@@ -1705,14 +1703,14 @@ sub contact {
     if ((!defined $sysObjectID) && ($opts{snmp_ver} ne '1')) {
         Warn ("WARNING: Device does not seem to support snmpv2c, switching to v1 and re-trying.");
 	    $opts{snmp_ver} = '1';
-	    snmp_def($opts{router}, $opts{community}, $opts{snmp_ver});
+	    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
         ($sysObjectID) = get('sysObjectID');
     } elsif (!defined $sysObjectID) {
         Warn ("WARNING: Device does not seem to support snmpv1 correctly, try running genRtrConfig with --snmpv2c option\n  You should always try running with snmpv2c support enabled, unless the device is known to be allergic to it.");
     } 
 
     if (!defined $sysObjectID || $sysObjectID eq 0) {
-        Error ("Unable to retrieve sysObjectID from $opts{router}.\n        Bad community name and/or Device not responding. End.");
+        Error ("Unable to retrieve sysObjectID from $opts{devicename}.\n        Bad community name and/or Device not responding. End.");
         return 0;
     }
     $opts{sysObjectID} = $sysObjectID; 

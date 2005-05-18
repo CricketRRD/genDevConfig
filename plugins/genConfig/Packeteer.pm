@@ -181,14 +181,16 @@ sub custom_targets {
     # $targetname = 'packeteer-cardinfo';
     # 
     # $file->writetarget($targetname, '',
-    #                ('display-name' => $targetname,
-    #                # Essential for cricktet to collect the stats
+    #                (
+    #                # --default is set to 'display-name' => '%devicename% %interface-name%',
+    #                # If you wish something different, you canoverride it here.
+    #                'interface-name' => $targetname,
+    #                # target-type must be defined to collect statistics
     #                'target-type'  => 'packeteer-special-target',
     #                'short-desc'     => $sdesc,
     #                'long-desc'      => $ldesc,
     #                'order'          => $opts->{order},
-    #                #Optional
-    #                'inst'           => 0 # You could reference an index or a map
+    #                'inst'           => 0 # You could reference an index or a map, --default-- is set to map(%interface-name%).
     #                ) );
     # # Decrease the order in which each target appears
     # $opts->{order} -= 1;
@@ -214,7 +216,7 @@ sub custom_targets {
             } else {
                     $speed_str = "nil";
             }
-            my $name = "$opts->{router}.$index";
+            my $name = "$opts->{devicename}.$index";
             my $target = $classFullName{$index};
             ### If we already have _ in the name, replace them with -, other wies it will stuff up the split function below.
             $target =~ s/\_/\-/g;
@@ -235,7 +237,6 @@ sub custom_targets {
 
             $file->writetarget($target, '',
                     ('interface-name' => $classFullName{$index},
-                    'display-name' => '%interface-name%',
                     'target-type'  => 'packeteer-class',
                     'short-desc'     => $sdesc,
                     'long-desc'      => $ldesc,

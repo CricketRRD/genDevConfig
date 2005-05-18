@@ -478,7 +478,7 @@ sub custom_targets {
             my ($cpumodel) = $cpumodels{$physindex{$cpu}};
             my($target) = "cpu_" . $cpuname;
             $target =~ s/[\/\s:,\.]/\_/g;
-            my $ldesc = $opts->{router} if ($opts->{router});
+            my $ldesc = $opts->{devicename} if ($opts->{devicename});
             $ldesc .= "<BR>" . $cpuname;
             $ldesc .= "<BR>" . $cpudescr;
             $ldesc .= "<BR>" . $cpumodel;
@@ -796,7 +796,7 @@ sub custom_interfaces {
             $ifdescr{$index} = $ifdescr{$mainif};
 
             push(@config,      'dlci'           => $dlci,
-                               'display-name'   => "$opts->{router} $dspname",
+                               'display-name'   => "$opts->{devicename} $dspname",
                                'target-type'    => 'frame-interface');
 
             $match = 1;

@@ -262,7 +262,7 @@ sub custom_targets {
 
 			push(@config,
 				'order'		=>	$opts->{order},
-				'display-name'	=>	"%router% chassis",
+				'display-name'	=>	"%devicename% chassis",
 				'short-desc'	=>	$sdesc,
 				'long-desc'	=>	$ldesc,
 				'inst'		=>	0,
@@ -318,7 +318,7 @@ sub custom_targets {
 
 			push(@config,
 				'order'		=>	$opts->{order},
-				'display-name'	=>	"%router% $filter  $counter",
+				'display-name'	=>	"%devicename% $filter  $counter",
 				'short-desc'	=>	$sdesc,
 				'long-desc'	=>	$ldesc,
 				'inst'		=>	0,
@@ -346,7 +346,6 @@ sub custom_targets {
 				'tunnel-name'	=>	$junipermplslspname{$key},
 				'inst'		=>	"\"(\'$key\')\"",
 				'order'		=>	$opts->{order},
-				'display-name'	=>	'%tunnel-name%',
 				'interface-name'=>	'%tunnel-name%',
 				'long-desc'	=>	'%tunnel-name%',
 				'target-type'	=>	'juniper-mpls-tunnel'
