@@ -64,10 +64,15 @@ my $snmp;
 my $req_pixconn = 1; # Enabled by default
 my $pixconn;
 
-my $script = "Cisco PIX genDevConfig Module";
+my $script = "CiscoPIX genDevConfig Module";
 
 ###############################################################################
 ###############################################################################
+
+sub plugin_name {
+    my $self = shift; 
+    return $script;
+}
 
 #-------------------------------------------------------------------------------
 # device_types
@@ -226,7 +231,6 @@ sub custom_interfaces {
     my $match      = $data->{match};
     my $customsdesc = $data->{customsdesc};
     my $customldesc = $data->{customldesc};
-    my $customfile = $data->{customfile};
 
     ###
     ### START DEVICE CUSTOM INTERFACE CONFIG SECTION
@@ -249,7 +253,6 @@ sub custom_interfaces {
     $data->{match}  = $match;
     $data->{customsdesc} = $customsdesc;
     $data->{customldesc} = $customldesc;
-    $data->{customfile} = $customfile;
 
     return;
 }
@@ -264,7 +267,6 @@ sub custom_files {
     my ($self,$data,$opts) = @_;
 
     # Saving local copies of runtime data
-    my $customfile     = $data->{customfile};
     my $file           = $data->{file};
     my $c              = $data->{c};
     my $target         = $data->{target};

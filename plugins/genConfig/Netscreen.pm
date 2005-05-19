@@ -61,6 +61,16 @@ my $req_fwstats = 1; # Default is always provide these stats.
 my $fwstats;
 my $script = "Netscreen genDevConfig module";
 
+###############################################################################
+# plugin_name
+# IN : N/A
+# OUT: returns the name of the plugin
+###############################################################################
+
+sub plugin_name {
+   my $self = shift;
+   return $script;
+}
 
 ###############################################################################
 # device_types

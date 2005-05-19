@@ -75,6 +75,17 @@ my $script = "Nortel Accelar/Passport genDevConfig Module";
 ###############################################################################
 
 #-------------------------------------------------------------------------------
+# plugin_name
+# IN : N/A
+# OUT: returns the name of the plugin
+#-------------------------------------------------------------------------------
+
+sub plugin_name {
+   my $self = shift;
+   return $script;
+}
+
+#-------------------------------------------------------------------------------
 # device_types
 # IN : N/A
 # OUT: returns an array ref of devices this plugin can handle
@@ -197,7 +208,6 @@ sub custom_interfaces {
     my $match      = $data->{match};
     my $customsdesc = $data->{customsdesc};
     my $customldesc = $data->{customldesc};
-    my $customfile = $data->{customfile};
 
     ###
     ### START DEVICE CUSTOM INTERFACE CONFIG SECTION
@@ -225,7 +235,6 @@ sub custom_interfaces {
     $data->{match}  = $match;
     $data->{customsdesc} = $customsdesc;
     $data->{customldesc} = $customldesc;
-    $data->{customfile} = $customfile;
 
     return;
 }
@@ -240,7 +249,6 @@ sub custom_files {
     my ($self,$data,$opts) = @_;
 
     # Saving local copies of runtime data
-    my $customfile     = $data->{customfile};
     my $file           = $data->{file};
     my $c              = $data->{c};
     my $target         = $data->{target};

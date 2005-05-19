@@ -746,19 +746,36 @@ Debug ("\nMIB-II System description: $opts{sysDescr}");
 ### External plugins for device discovery
 
 my @plugins = genConfig::pluginUtils::find_plugin($Common::global::gInstallRoot, \%opts);
-my $plugin;
 
 if (!@plugins) {
     Info (" No plugin found for $opts{sysDescr} using builtin functions.");
 } elsif (@plugins > 1) {
-    Die("Multiple plugins found.  ",
-	  "Use the --plugin flag to choose one of the following:\n",
-	  "     ", join("\n     ", @plugins), "\n");
+    Info ("Multiple plugins found. ");
+    my $forcedplugin;
+    if (grep { $opts{forcedplugin} =~ m/$_->plugin_name()/gi } @plugins ) {
+        foreach my $plugin (@plugins) {
+	    if ($opts{forcedplugin} =~ m/$plugin->plugin_name()/gi) {
+	        $forcedplugin = $plugin;
+		Info ("Forced plugin for $opts{sysDescr} using $plugin->plugin_name().");
+            }
+	}
+        @plugins = ($forcedplugin) if ($forcedplugin);
+    } else {
+        Warn ("No plugins forced on multiple matched plugins. ",
+	"Defaulting to using all matched plugins.");
+        foreach my $plugin (@plugins) {
+		Info ("Using multiple plugins: " . $plugin->plugin_name());
+        }
+    }
 } else {
-    Info ("Found a plugin for $opts{sysDescr} using custom discovery functions.");
-    $plugin = $plugins[0];
+    Info ("Found a plugin for $opts{sysDescr}");
+}
+
+foreach my $plugin (@plugins) {
     # Find out model, chassisname, chassistype, etc. from the discovery
     # plugin module.
+    # Or if this is a complimentary plugin that does not process chassis info, chassis information is not set.
+    Info ("Custom discovery functions for plugin: " . $plugin->plugin_name());
     $plugin->discover(\%opts);
 }
 
@@ -772,11 +789,10 @@ if ($opts{sysDescr} =~ /VPN 3000/) {
 
 ### CISCO Aironet-AP && Aironet-Bridge SECTION
 ###
-if ($opts{sysObjectID} eq 'enterprises.9.1.379' ||
-    $opts{sysObjectID} eq 'enterprises.9.1.380' ||
-    $opts{sysObjectID} eq 'enterprises.9.1.474' ||
-    $opts{sysObjectID} eq 'enterprises.9.1.507') {
-
+if ($opts{sysObjectID} eq '1.3.6.1.4.1.9.1.379' ||
+    $opts{sysObjectID} eq '1.3.6.1.4.1.9.1.380' ||
+    $opts{sysObjectID} eq '1.3.6.1.4.1.9.1.474' ||
+    $opts{sysObjectID} eq '1.3.6.1.4.1.9.1.507') {
     $opts{model} = 'Aironet-AP';
 
     # If this is a wireless accespoint based on VxWorks
@@ -784,9 +800,9 @@ if ($opts{sysObjectID} eq 'enterprises.9.1.379' ||
     $opts{class} = 'cisco';
 }
 
-if ($opts{sysObjectID} eq 'enterprises.9.1.525' ||
-    $opts{sysObjectID} eq 'enterprises.9.1.533' ||
-    $opts{sysObjectID} eq 'enterprises.9.1.552') {
+if ($opts{sysObjectID} eq '1.3.6.1.4.1.9.1.525' ||
+    $opts{sysObjectID} eq '1.3.6.1.4.1.9.1.533' ||
+    $opts{sysObjectID} eq '1.3.6.1.4.1.9.1.552') {
 
     # This is an IOS Access point which is currently
     # not supported.
@@ -1105,7 +1121,7 @@ if ($ipForwDatagrams && $ipForwDatagrams != 0) {
     $opts{order} -= 1;
 }
 
-if ($plugin) {
+foreach my $plugin (@plugins) {
     my %data = (
                 'ifspeed'    => \%ifspeed,
                 'ifdescr'    => \%ifdescr,
@@ -1298,7 +1314,6 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     my $wmatch = 0;
     my $customsdesc = '';
     my $customldesc = '';
-    my $customfile = '';
 
     # Force stickyness on non-sticky global opts variables
     $opts{nomtucheck} = 1 if $opts{force_nomtucheck}; 
@@ -1314,10 +1329,14 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     # Assign the interface to the right subdir/target file for --modular
     # devices.
     if ($opts{req_modular}) {
+
+        ### Debugging information
         Debug(" modular:\$index = $index");
         Debug(" modular:\$ifdescr{$index} = $ifdescr{$index}");
         Debug(" modular:\$slotPortList{$ifdescr{$index}} = $slotPortList{$ifdescr{$index}}") if exists $slotPortList{$ifdescr{$index}};
         Debug(" modular:\$slotList{$slotPortList{$ifdescr{$index}}} = $slotList{$slotPortList{$ifdescr{$index}}}") if exists $slotPortList{$ifdescr{$index}};
+	### End Debugging information
+
         my $_file = $slotList{$slotPortList{$ifdescr{$index}}} if exists $slotPortList{$ifdescr{$index}};
         if ($_file) {
           $file = $_file;
@@ -1400,7 +1419,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
 
     } elsif ($opts{contivitytunnels} && $iftype{$index} == 131) {
 
-        ### Contivity IPSec tunnel - change target name and set speed to no zero value
+        ### Contivity IPSec tunnel
 
         push(@config, 'target-type' => 'standard-interface' . $hc);
 
@@ -1424,11 +1443,9 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         # Contivities may not report speed correctly on tunnel interfaces
         # This is a fudge but it works for me.  
         # Could put logic in here to put this to interface speed?
-        # Note from Francois: Where to get the ifspeed, physical interface?!..
+        # Note from Francois: How to find out index for physical interface 
 
-        if ( $ifspeed{$index} == 0 ) {
-            $ifspeed{$index} = 1920000;
-        }
+        $opts{nospeedcheck} = 1 if $ifspeed{$index} == 0;
         $match = 1;
 
     }  elsif (($iftype{$index} == 135)  &&
@@ -1439,8 +1456,9 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         push(@config, 'target-type' => 'sub-interface' . $hc);
         $match = 1;
 
-    }  elsif ($plugin) {
-
+    }  elsif (@plugins) {
+        foreach my $plugin (@plugins) {
+	next if $match;
         Info (" Found a plugin for index $index using custom interface functions.");
         my %data = (
                     'ifspeed'  => \%ifspeed,
@@ -1459,7 +1477,6 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
                     'ldesc'    => $ldesc,
                     'customsdesc' => $customsdesc,
                     'customldesc' => $customldesc,
-                    'customfile'  => $customfile,
                     );
 
         $plugin->custom_interfaces($index, \%data, \%opts);
@@ -1481,7 +1498,7 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         $ldesc      = $data{ldesc};
         $customsdesc = $data{customsdesc};
         $customldesc = $data{customldesc};
-        $customfile = $data{customfile};
+	}
     }
 
     my $speed = int($ifspeed{$index} / $b); # bits to bytes
@@ -1642,7 +1659,7 @@ $c="# ";
     ### Add the monitor thresholds for the interface target-type
     ### Temporary hack until, the monitor threshold expansion problem
     ### is resolved.
-
+    
     my %tmpconfig = @config;
     push(@config,
          'monitor-type' => $tmpconfig{'target-type'} . $mtclass . $hc , 
@@ -1655,17 +1672,19 @@ $c="# ";
     ### Otherwise, put it in the normal target file.
     ### Monitoring thresholds are applied within writetarget
 
-    if ($plugin) {
-        my %data = (
-                'customfile'    => \$customfile,
-                'file'          => \$file,
-                'c'             => \$c,
-                'target'        => \$target,
-                'config'        => \@config,
-                'wmatch'        => \$wmatch,
-                );
-        $plugin->custom_files(\%data, \%opts); 
-        # $wmatch returned by reference in data hash reference
+    if (@plugins) {
+        foreach my $plugin (@plugins) {
+	    next if $wmatch;
+            my %data = (
+                    'file'          => \$file,
+                    'c'             => \$c,
+                    'target'        => \$target,
+                    'config'        => \@config,
+                    'wmatch'        => \$wmatch,
+                    );
+            $plugin->custom_files(\%data, \%opts); 
+            # $wmatch returned by reference in data hash reference
+	}
     }
 
     if (!$wmatch) {

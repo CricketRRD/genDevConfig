@@ -58,6 +58,18 @@ my %OIDS = (
 ### Misc private stuff...
 
 my %l2stats;
+my $script = "Catalyst CatOS genDevCOnfig plugin";
+
+###############################################################################
+# plugin_name
+# IN : N/A
+# OUT: returns plugin name
+###############################################################################
+
+sub plugin_name {
+    my $self = shift;
+    return $script;
+}
 
 
 ###############################################################################
@@ -260,7 +272,6 @@ sub custom_interfaces {
     my $match      = $data->{match};
     my $customsdesc = $data->{customsdesc};
     my $customldesc = $data->{customldesc};
-    my $customfile = $data->{customfile};
 
     ###
     ### START DEVICE CUSTOM INTERFACE CONFIG SECTION
@@ -289,7 +300,6 @@ sub custom_interfaces {
     $data->{match}  = $match;
     $data->{customsdesc} = $customsdesc;
     $data->{customldesc} = $customldesc;
-    $data->{customfile} = $customfile;
 
     return;
 }
