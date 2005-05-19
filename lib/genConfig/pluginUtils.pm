@@ -63,20 +63,19 @@ sub find_plugin {
 
     ### If the list contains only one module name, instantiate an object
     ### using that module and return that instead.
+    my @validplugins = ();
 
-    if (@plugins == 1) {
+    foreach my $plugin (@plugins) {
 	eval {
-	    my $mod = $plugins[0];
-	    $plugins[0] = $mod->new($opts->{pluginflags});
+	    push (@validplugins,  $plugin->new($opts->{pluginflags}));
 	};
 	if ($@) {
-	    Warn("$plugins[0] does not appear to be a valid plugin module.  ",
+	    Warn("$plugin does not appear to be a valid plugin module.  ",
 		 "Ignoring it. $@");
-	    @plugins = ();
 	}
     }
 
-    return @plugins;
+    return @validplugins;
 }
 
 
