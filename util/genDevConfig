@@ -1028,7 +1028,8 @@ if ($opts{refdefault}) {
 
 
 $file->writetarget('--default--', '',
-        'devicename'         => $opts{devicename},
+        'devicename'     => $opts{devicename},
+        'snmp-host'      => $opts{devicename},
         'directory-desc' => $opts{sysLocation},
         'short-desc'     => '',
         'long-desc'      => '%short-desc%',
