@@ -32,7 +32,7 @@ use genConfig::Plugin;
 
 our @ISA = qw(genConfig::Plugin);
 
-my $VERSION = 1.03;
+my $VERSION = 1.04;
 
 ### End package init
 
@@ -44,7 +44,8 @@ my $VERSION = 1.03;
 ###############################################################################
 my @types = (
 	'Juniper M\d+ router',
-	'Juniper m\d+ Internet Backbone Router'
+	'Juniper m\d+ Internet Backbone Router',
+	'Juniper Networks, Inc. m\d+ internet router'
 );
 
 # These are the OIDS used by this plugin
@@ -139,7 +140,7 @@ sub can_handle {
 	my($self, $opts) = @_;
 
     foreach my $type (@types) {
-        return ($opts->{sysDescr} =~ m/$type/gi)
+        return 1 if ($opts->{sysDescr} =~ m/$type/gi)
         # Example of alternate method
         #$type =~ s/\./\\\./g; # Use this to escape dots for pattern matching
         #return ($opts->{sysObjectID} =~ m/$type/gi)
@@ -168,10 +169,13 @@ sub discover {
 
 	$opts->{vendor_descr_oid} = "ifAlias";
 
-	($opts->{vendor_soft_ver}) = ($opts->{sysDescr} =~ m/Version\s+([\d\.]+)\(\d/o);
+	($opts->{vendor_soft_ver}) = 
+	  ($opts->{sysDescr} =~ m/Version\s+([\d\.]+)\(\d/o) if ($opts->{sysDescr} =~ m/Version\s+([\d\.]+)\(\d/o);
+	($opts->{vendor_soft_ver}) = ($opts->{sysDescr} =~ m/kernel JUNOS\s+([^\s]+)/) if ($opts->{sysDescr} =~ m/kernel JUNOS\s+([^\s]+)/);
 
 	if (($opts->{sysDescr} =~ /Juniper M\d+ router/) ||
-	    ($opts->{sysDescr} =~ /Juniper m\d+ Internet Backbone Router/)) {
+	    ($opts->{sysDescr} =~ /Juniper m\d+ Internet Backbone Router/) ||
+	    ($opts->{sysDescr} =~ /Juniper Networks, Inc. m\d+ internet router/)) {
 		($opts->{model}) = $opts->{sysDescr} =~ / (m\d+) /i;
 		Info("Found an JUNOS device: model: $opts->{model}");
 	}
@@ -244,6 +248,8 @@ sub custom_targets {
 				next;
 			} elsif ($jnx_box{$key} eq 'backplane') {
 				$ttype = 'backplane';
+			} elsif (!defined($frutyped)) {
+				next;
 			} elsif ($frutyped eq 'powerEntryModule') {
 				$ttype = 'powersupply';
 			} elsif ($frutyped eq 'controlBoard') {
