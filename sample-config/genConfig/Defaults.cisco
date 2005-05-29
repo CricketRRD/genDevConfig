@@ -732,7 +732,7 @@ targetType  cisco-interface-nu
 
 targetType  cisco-interface-hc
 	ds		=	"ifHCInOctets, ifHCOutOctets, ifInErrors,
-				ifOutErrors, ifHCInUcastPackets, ifHCOutUcastPackets,
+				ifOutErrors, ifHCInUcastPkts, ifHCOutUcastPkts,
 				locIfInRunts, locIfInGiants, locIfInCRC, locIfInFrame,
 				locIfInOverrun, locIfInIgnored, locIfInAbort,
 				locIfResets, locIfCarTrans, locIfCollisions,
@@ -746,9 +746,9 @@ targetType  cisco-interface-hc
 				locIfInAbort locIfResets locIfCarTrans"
 targetType  cisco-interface-nu-hc
 	ds		=	"ifHCInOctets, ifHCOutOctets, ifInErrors,
-				ifOutErrors, ifHCInUcastPackets, ifHCOutUcastPackets,
-                                ifHCInMulticastPkts, ifHCInMulticastPkts,
-                                ifHCInBroadcastPkts, ifHCInBroadcastPkts,
+				ifOutErrors, ifHCInUcastPkts, ifHCOutUcastPkts,
+                                ifHCInMulticastPkts, ifHCOutMulticastPkts,
+                                ifHCInBroadcastPkts, ifHCOutBroadcastPkts,
 				locIfInRunts, locIfInGiants, locIfInCRC, locIfInFrame,
 				locIfInOverrun, locIfInIgnored, locIfInAbort,
 				locIfResets, locIfCarTrans, locIfCollisions,

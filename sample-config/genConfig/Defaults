@@ -74,8 +74,8 @@ OID     ifHCInMulticastPkts    1.3.6.1.2.1.31.1.1.1.8
 OID     ifHCInBroadcastPkts    1.3.6.1.2.1.31.1.1.1.9
 OID     ifHCOutOctets          1.3.6.1.2.1.31.1.1.1.10
 OID     ifHCOutUcastPkts       1.3.6.1.2.1.31.1.1.1.11
-OID     ifHCInMulticastPkts    1.3.6.1.2.1.31.1.1.1.12
-OID     ifHCInBroadcastPkts    1.3.6.1.2.1.31.1.1.1.13
+OID     ifHCOutMulticastPkts    1.3.6.1.2.1.31.1.1.1.12
+OID     ifHCOutBroadcastPkts    1.3.6.1.2.1.31.1.1.1.13
 OID     ifAlias                1.3.6.1.2.1.31.1.1.1.18
  
 # OID's we'll be using in this tree
