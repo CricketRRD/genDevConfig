@@ -38,8 +38,16 @@ package Common::genRtrConfig;
 
 require Exporter;
 
-BEGIN {
-    require '/etc/cricket/cricket-conf.pl';
+BEGIN { # Try to find the config; one level below $0, or in other likely places.
+    my $programdir = (($0 =~ m|^(.*/)|)[0] || "./") . ".";
+    eval "require '$programdir/../cricket-conf.pl'";
+    for (qw[/usr/local/etc /etc]) {
+        eval "require '$_/cricket-conf.pl'"
+          unless $Common::global::gInstallRoot;
+        eval "require '$_/cricket/cricket-conf.pl'"
+          unless $Common::global::gInstallRoot;
+   }
+    $Common::global::gInstallRoot ||= $programdir;
 }
 
 use lib "$Common::global::gInstallRoot/lib";
