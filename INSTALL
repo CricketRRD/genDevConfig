@@ -44,7 +44,7 @@ logical information:
  - plugins/genConfig/Netscreen.pm     # The plugin directory
  - plugins/genConfig/CiscoIOS.pm      # The plugin directory
  - plugins/genConfig/CatalystCatOS.pm # The plugin directory
-
+ - plugins/genConfig/...
 
 ##############################################################################
 #
@@ -78,7 +78,7 @@ if anything new was added.
 
 If you use the genDevConfig Defaults file included in this release within
 your Cricket config-tree (see the example below). You should replace the
-Defaults file with the new version. 
+Defaults files with the new versions. 
 
 Note: If you do *NOT* use a vanilla version of the genDevConfig Defaults
 file, then you must copy the changes from the new Defaults file to your
@@ -116,7 +116,7 @@ Do a test call of the device before anything else
 
 ./genDevConfig -C community-name --verbose HOSTNAME
 
-You can consult www.acktomic.com/cricket/genRtrConfig.html for more information on how to call genRtrConfig from the command-line.
+You can consult www.acktomic.com/cricket/genRtrConfig.html for more information on how to call genDevConfig from the command-line.
 
 ### Step 4
 

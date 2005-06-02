@@ -15,6 +15,9 @@ is handled by the sourceforge cvs cricket.sourceforge.net
 #
 # - Now uses GetOpts::Long module for args processing. 
 #   Much more robust options matching.
+# - --nospeedcheck option added
+# - Support for greater than gig interfaces
+# - Supports multiple plugin matches for a given device
 # - Brand new Foundry plugin based on CHIRP ServerIron plugin
 # - FIX: NortelAccelar plugin now recognizes devices correctly.
 # - Defaults have been cleaned up commented and split by vendor.
