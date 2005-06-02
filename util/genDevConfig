@@ -31,7 +31,6 @@
 #
 # Re-named:    05/03/04  - Francois Mikus   "fmikus" . "@" . "acktomic.com"
 #
-# Mods and Credits:    See CHANGES.genDevConfig
 #
 ##############################################################################
 package Common::genRtrConfig;
@@ -69,7 +68,7 @@ use ConfigTree::Cache;      ### Used for monitor threshold processing
 
 my %ifType_d = %genConfig::Utils::ifType_d;
 
-# Common::Log::setFormat('extended');
+Common::Log::setFormat('minimal');
 
 my $VERSION = 'genDevConfig 2.0.0beta12';
 
@@ -480,6 +479,10 @@ usage() if (@ARGV != 1);
 
 # Set it to the optional user defined level
 Common::Log::setLevel($opts{logLevel});
+
+# Log run time, just in case we are not running in standard or extended
+# logging format.
+Info ("Script genDevConfig started on: " . Common::Log::timeStr(time()));
 
 $opts{devicename} = $ARGV[0];
 snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
