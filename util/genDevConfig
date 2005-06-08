@@ -480,6 +480,8 @@ usage() if (@ARGV != 1);
 # Set it to the optional user defined level
 Common::Log::setLevel($opts{logLevel});
 
+$Common::global::monitors = $opts{monitors};
+$Common::global::outputdir_ct = $opts{outputdir_ct};
 # Log run time, just in case we are not running in standard or extended
 # logging format.
 Info ("Script genDevConfig started on: " . Common::Log::timeStr(time()));
@@ -1602,6 +1604,13 @@ sub portlist2array {
 sub getRoot {
     return ($Common::global::gInstallRoot);
 }
+sub getMonitors {
+    return ($opts{monitors});
+}
+sub getOutputDir {
+    return ($opts{output_dir});
+}
+
 # Options munging
 sub deprecatedoption {
     Warn ("You have used a deprecated option check usage. $_");
@@ -1634,9 +1643,11 @@ sub pluginflags {
 sub setOutputDir {
     my($opt,$value) = @_;
     # absolut system path to where to write the target
-    $opts{outputdir} = $Common::global::gConfigRoot . '/' . $value;
+    $value =~ s/^\///; #Strip any leading slashes
+    $value =~ s/\/$//; #Strip any trailing slashes
+    $opts{outputdir} = $Common::global::gConfigRoot . '/' . $value . '/';
     # config-tree relative path
-    $opts{outputdir_ct} = $value; 
+    $opts{outputdir_ct} = '/' . $value; 
 }
 
 # This example sub tries to match a monitorType from the config tree.

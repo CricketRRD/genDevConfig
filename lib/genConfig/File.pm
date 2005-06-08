@@ -122,7 +122,7 @@ sub writetarget {
     print $f "${comment}target $name\n";
 
     # Replace monitor-types with actual monitor-thresholds
-    applyMonitoringThresholds($f,\%value);
+    applyMonitoringThresholds($name,\%value);
 
     foreach my $key (sort keys %value) {
         $self->writepair($key, $value{$key}, $comment);

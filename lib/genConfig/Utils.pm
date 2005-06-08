@@ -35,6 +35,7 @@ BEGIN {
 }
 
 use lib "$gInstallRoot/lib";
+use Data::Dumper qw(Dumper);
 
 use Common::Log;
 use Socket;
@@ -84,12 +85,10 @@ sub translateRttTargetAddr {
 sub checkMonitorType {
     my($path, $monitorType) = @_;
 
-    Debug ("path: $path monitortype: $monitorType");
+    my($h) = $Common::global::gCT->configHash($path, 'monitortype', lc($monitorType));
+    return '' if (!exists($h->{'monitor-thresholds'}));
 
-    my($h) = $Common::global::gCT->configHash($path, 'monitortype', $monitorType);
-    return '' if (!$h);
-
-    Debug (" Defined monitor thresholds: $h->{'monitor-thresholds'}");
+    Info (" Defined monitor thresholds: $h->{'monitor-thresholds'}");
     return $h->{'monitor-thresholds'} if (defined $h->{'monitor-thresholds'} && $h->{'monitor-thresholds'});
 }
 
@@ -100,18 +99,25 @@ sub checkMonitorType {
 ###############################################################################
 
 sub applyMonitoringThresholds {
-    my($dir, $value) = @_;
-
-    if (!$Common::genDevConfig::opts{monitors}) {
+    my($name, $value) = @_;
+    Debug (" Monitor-debug: Printing out the target keys.");
+    while (($key, $val)= each( %{$value})){
+    Debug (" Monitor-debug: targetkey: $key value: $val");
+    }
+    my $dir = $Common::global::outputdir_ct;
+    if (!$Common::global::monitors || !$dir) {
+       Debug ("Skipping monitoring thresholds for this target.");
        if (exists($value->{'monitor-type'})) {
            delete($value->{'monitor-type'});
        }
     } elsif (exists($value->{'monitor-type'})) {
+       Debug ("Looking for monitoring thresholds for this target based on monitor-type.");
        if (checkMonitorType($dir, $value->{'monitor-type'})) {
            $value->{'monitor-thresholds'} = $_;
        }
        delete($value->{'monitor-type'});
-    } else {
+    } elsif (exists($value->{'target-type'}) && $name ne "--default--") {
+       Debug ("Looking for monitoring thresholds for this target based on target-type.");
        if (checkMonitorType($dir, $value->{'target-type'})) {
            $value->{'monitor-thresholds'} = $_;
        }
