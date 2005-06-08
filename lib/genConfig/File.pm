@@ -35,8 +35,9 @@ BEGIN {
 }
 
 use Common::Log;
+use genConfig::Utils;
 
-my $VERSION = '0.90';
+my $VERSION = '0.91';
 my $header = '';
 
 ###############################################################################
@@ -118,12 +119,13 @@ sub writetarget {
     my($self, $name, $comment, %value) = @_;
 
     my $f = $self->{'file'};
-
     print $f "${comment}target $name\n";
+
+    # Replace monitor-types with actual monitor-thresholds
+    applyMonitoringThresholds($f,\%value);
 
     foreach my $key (sort keys %value) {
         $self->writepair($key, $value{$key}, $comment);
-
     }
 
     print $f "\n";

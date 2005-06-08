@@ -27,7 +27,7 @@ use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 use Exporter;
 
 @ISA = qw(Exporter);
-@EXPORT = qw(fmi translateRttTargetAddr);
+@EXPORT = qw(fmi translateRttTargetAddr applyMonitoringThresholds);
 
 my ($gInstallRoot);
 BEGIN {
@@ -61,7 +61,7 @@ sub fmi {
 
 ###############################################################################
 #
-# Conversion d'adresse Hexa des agents SNMP SAA en decimal
+# HEX Address conversion for SAA SNMP responses
 #
 ###############################################################################
 
@@ -75,9 +75,55 @@ sub translateRttTargetAddr {
     return ( $value );
 }
 
+###############################################################################
+#
+# Fetch the monitor-type from the config-tree
+#
+###############################################################################
+
+sub checkMonitorType {
+    my($path, $monitorType) = @_;
+
+    Debug ("path: $path monitortype: $monitorType");
+
+    my($h) = $Common::global::gCT->configHash($path, 'monitortype', $monitorType);
+    return '' if (!$h);
+
+    Debug (" Defined monitor thresholds: $h->{'monitor-thresholds'}");
+    return $h->{'monitor-thresholds'} if (defined $h->{'monitor-thresholds'} && $h->{'monitor-thresholds'});
+}
+
+###############################################################################
+#
+# Replace monitor-types with appropriate monitor-thresholds.
+#
+###############################################################################
+
+sub applyMonitoringThresholds {
+    my($dir, $value) = @_;
+
+    if (!$Common::genDevConfig::opts{monitors}) {
+       if (exists($value->{'monitor-type'})) {
+           delete($value->{'monitor-type'});
+       }
+    } elsif (exists($value->{'monitor-type'})) {
+       if (checkMonitorType($dir, $value->{'monitor-type'})) {
+           $value->{'monitor-thresholds'} = $_;
+       }
+       delete($value->{'monitor-type'});
+    } else {
+       if (checkMonitorType($dir, $value->{'target-type'})) {
+           $value->{'monitor-thresholds'} = $_;
+       }
+    }
+    return;
+}
+
+###############################################################################
 #
 # Interface types based on IANA types
 #
+###############################################################################
 
 (%ifType_d)=('1'   => 'Other',
            '2'   => 'regular1822',

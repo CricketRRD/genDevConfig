@@ -33,7 +33,7 @@
 #
 #
 ##############################################################################
-package Common::genRtrConfig;
+package Common::genDevConfig;
 
 require Exporter;
 
@@ -66,6 +66,8 @@ use genConfig::Utils;       ### Misc
 use genConfig::pluginUtils; ### Plugin processing
 use ConfigTree::Cache;      ### Used for monitor threshold processing
 
+# Yes it is a copy, but I would rather avoid having -> dereferences or other
+# stuff obfuscating the code.
 my %ifType_d = %genConfig::Utils::ifType_d;
 
 Common::Log::setFormat('minimal');
@@ -178,7 +180,7 @@ USAGE: $0 [options] hostname
    -2                    - Use SNMP version 2c and retrieve high capacity
    --snmpv2c               counters where possible. Will still use snmpv1
                            for non interface counters.
-   --version             - Display version number
+   --version             - Display version information
    --vendorint           - Get extra interface stats from proprietary MIB (For CiscoIOS and CatalystOS) or MIB-II (for all others).
                            This uses more data sources in the resulting RRD.
                            Support for Cisco, Foundry, rfc1643 Etherlike.
@@ -872,8 +874,7 @@ if ($opts{chassisstats}) {
     push (@options, 'sortby', $opts{sortby}) if ($opts{sortby});
     push (@options, 'collect', 'false') if (!$opts{chassiscollect});
     push (@options, 'class', $opts{class}) if ($opts{class});
-    #Commenting out until monitor-type support finalized
-    #push (@options, 'monitor-type', $opts{chassisname} ) if ($opts{chassisname} ne 'Chassis-Generic');
+    push (@options, 'monitor-type', $opts{chassisname} ) if ($opts{chassisname} ne 'Chassis-Generic');
 
     # Write the data to the file
 
@@ -1471,19 +1472,14 @@ $c="# ";
     ### Add the monitor thresholds for the interface target-type
     ### Temporary hack until, the monitor threshold expansion problem
     ### is resolved.
-    
+    #
     my %tmpconfig = @config;
     push(@config,
          'monitor-type' => $tmpconfig{'target-type'} . $mtclass . $hc , 
     );
-
+    
     ### Write the target interface to the configuration file
-    ###
-    ### If we set the dial peer ID earlier (--voip), then write this
-    ### config to the dial peer target file.
-    ### Otherwise, put it in the normal target file.
-    ### Monitoring thresholds are applied within writetarget
-
+    
     if (@plugins) {
         foreach my $plugin (@plugins) {
 	    next if $wmatch;
@@ -1508,6 +1504,7 @@ $c="# ";
     }
 }
 Info ("......................... [DONE]");
+Info ("Closing filehandles                 ");
 
 if ($opts{modular}) {
     for (keys %slotList) {
@@ -1516,6 +1513,7 @@ if ($opts{modular}) {
 } else {
     $file->close();
 }
+Info ("......................... [DONE]");
 
 exit;
 
@@ -1537,7 +1535,7 @@ sub contact {
 	    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
         ($sysObjectID) = get('sysObjectID');
     } elsif (!defined $sysObjectID) {
-        Warn ("WARNING: Device does not seem to support snmpv1 correctly, try running genRtrConfig with --snmpv2c option\n  You should always try running with snmpv2c support enabled, unless the device is known to be allergic to it.");
+        Warn ("WARNING: Device does not seem to support snmpv1 correctly, try running genDevConfig with --snmpv2c option\n  You should always try running with snmpv2c support enabled, unless the device is known to be allergic to it.");
     } 
 
     if (!defined $sysObjectID || $sysObjectID eq 0) {
@@ -1652,19 +1650,3 @@ sub setOutputDir {
 #        'monitor-thresholds' => $_ ,
 #        );
 #    }
-
-sub checkMonitorType {
-    my($path, $monitorType) = @_;
-
-    Debug ("path: $path monitortype: $monitorType");
-
-    #Debug, monitorType must be lowercased in the second arg
-    #my($h) = $gCT->testHash('/genconfig', 'monitortype', 'chassis');
-
-    my($h) = $gCT->configHash($path, 'monitortype', $monitorType);
-    #ConfigTree::Cache::expandHash($h, $h, \&Warn);
-    return '' if (!$h);
-
-    Debug (" Defined monitor thresholds: $h->{'monitor-thresholds'}");
-    return $h->{'monitor-thresholds'} if (defined $h->{'monitor-thresholds'} && $h->{'monitor-thresholds'});
-}
