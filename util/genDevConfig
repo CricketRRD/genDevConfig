@@ -1633,8 +1633,7 @@ sub info {
 }
 sub pluginflags {
     my($opt,$value) = @_;
-    $value = $opt . $value;
-    if ($value =~ /^P(\w+)(=(.*))?/) {
+    if ($value =~ /^(\w+)(=(.*))?/) {
         push(@{$opts{pluginflags}->{$1}}, $3);
     }
     # It is a crude hack but I do not have time to dechunk the regex...
