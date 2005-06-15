@@ -157,11 +157,11 @@ USAGE: $0 [options] hostname
                            config entirely.  This also affects interfaces
                            commented out with --namedonly.
 
-   -Pxxx                 - Pass flag 'xxx' and possibly value 'yyy' to the 
-   -Pxxx=yyy               vendor specific plugin.  Can be used multiple times.
-   -Ph                   - print the vendor specific module's help info
+   -P xxx                - Pass flag 'xxx' and possibly value 'yyy' to the 
+   -P xxx=yyy               vendor specific plugin.  Can be used multiple times.
+   -P h                  - print the vendor specific module's help info
                            and exit.
-   -Phelp                  This is a special case of '-Pxxx'.
+   -P help                 This is a special case of '-P xxx'.
 
    -p <portlist>         - Collect data for the listed ports only.
    --ports <portlist>      "0/*,1/5-7,4/6" Example of supported syntax.
