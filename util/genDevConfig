@@ -460,6 +460,7 @@ GetOptions("bytes|b"		=> sub {$opts{units} = 'bytes';},
            "ports|p=s"		=>\&portlist,
            "defaults=s"		=>\&defaults,
            "info|i=s"		=>\&info,
+           "ip=s"		=>\$opts{ip},
            "sortby=s"		=>sub {my($opt,$value)=@_; $opts{sortby}=$value;},
            "rtragents!"		=>\$opts{rtragents},
            "nucast"		=>\$opts{nucast},
@@ -482,12 +483,26 @@ Common::Log::setLevel($opts{logLevel});
 
 $Common::global::monitors = $opts{monitors};
 $Common::global::outputdir_ct = $opts{outputdir_ct};
+
 # Log run time, just in case we are not running in standard or extended
 # logging format.
 Info ("Script genDevConfig started on: " . Common::Log::timeStr(time()));
+Info ("Building Name to IP Adress Translation   ");
 
 $opts{devicename} = $ARGV[0];
-snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
+
+# Get the ip address of the device we wish to build a configuration for
+my $hbn;
+if (!$opts{'nodns'} && !$opts{ip}) {
+    $hbn = gethostbyname($opts{'devicename'});
+    if($hbn) {
+        $opts{ip} = inet_ntoa($hbn->addr);
+    }
+}
+die "Cannot resolve '$opts{'devicename'}' and no ip specified on command-line" if (!$opts{ip});
+Info ("......................... [DONE]");
+
+snmp_def($opts{ip}, $opts{community}, $opts{snmp_ver});
 
 ###########################################################################
 ###
@@ -685,7 +700,7 @@ if ($opts{chassisstats}) {
     # rules based on model type.
     if (!$opts{usev2c}) {
 	    $opts{snmp_ver} = '1';
-	    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
+	    snmp_def($opts{ip}, $opts{community}, $opts{snmp_ver});
     }
 
     Info ("Model: $opts{model}");
@@ -745,11 +760,11 @@ my %ipadentif       = gettable('ipAdEntIfIndex');
 my %ifHCInOctets;
 my %ifHighSpeed;
 if ($opts{usev2c}) {
-    snmp_def($opts{devicename}, $opts{community}, '2c');
+    snmp_def($opts{ip}, $opts{community}, '2c');
     %ifHCInOctets    = gettable('ifHCInOctets');
     %ifHighSpeed     = gettable('ifHighSpeed');
     # Reset to default snmp v1
-    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
+    snmp_def($opts{ip}, $opts{community}, $opts{snmp_ver});
 }
 
 ### Create vendor specific Port/Slot Mapping variables
@@ -794,25 +809,7 @@ $file->write(<<EOD);
 
 EOD
 
-Info ("Building Name to IP Adress Translation   ");
-
-# get numeric IP
-my $hbn;
-my $ip = "can't resolve '$opts{'devicename'}'";
-if (!$opts{'nodns'}) {
-    $hbn = gethostbyname($opts{'devicename'});
-} else {
-    $ip = $opts{'devicename'};
-}
-
-if($hbn) {
-    $ip = inet_ntoa($hbn->addr) || "can't resolve '$opts{'devicename'}'";
-}
-
-Info ("......................... [DONE]");
-
 ### Set up the defaults.
-
 
 ### These options are used in the context of user defined variables
 ### added from the command-line directly to the --defaults-- section
@@ -828,12 +825,12 @@ if ($opts{refdefault}) {
 
 $file->writetarget('--default--', '',
         'devicename'     => $opts{devicename},
-        'snmp-host'      => $opts{devicename},
+        'snmp-host'      => $opts{ip},
         'directory-desc' => $opts{sysLocation},
         'short-desc'     => '',
         'long-desc'      => '%short-desc%',
         'display-name'   => '%devicename%  %interface-name%',
-        'ip'             => $ip,
+        'ip'             => $opts{ip},
         'interface-name' => '',
         'inst'           => 'map(interface-name)',
         ($opts{addcomm}) ? ('snmp-community' => $opts{community})
@@ -1534,14 +1531,14 @@ sub contact {
     if ((!defined $sysObjectID) && ($opts{snmp_ver} ne '1')) {
         Warn ("WARNING: Device does not seem to support snmpv2c, switching to v1 and re-trying.");
 	    $opts{snmp_ver} = '1';
-	    snmp_def($opts{devicename}, $opts{community}, $opts{snmp_ver});
+	    snmp_def($opts{ip}, $opts{community}, $opts{snmp_ver});
         ($sysObjectID) = get('sysObjectID');
     } elsif (!defined $sysObjectID) {
         Warn ("WARNING: Device does not seem to support snmpv1 correctly, try running genDevConfig with --snmpv2c option\n  You should always try running with snmpv2c support enabled, unless the device is known to be allergic to it.");
     } 
 
     if (!defined $sysObjectID || $sysObjectID eq 0) {
-        Error ("Unable to retrieve sysObjectID from $opts{devicename}.\n        Bad community name and/or Device not responding. End.");
+        Error ("Unable to retrieve sysObjectID from $opts{ip}.\n        Bad community name and/or Device not responding. End.");
         return 0;
     }
     $opts{sysObjectID} = $sysObjectID; 
