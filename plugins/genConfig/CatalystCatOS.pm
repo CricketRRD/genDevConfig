@@ -53,12 +53,34 @@ my %OIDS = (
 	    'cseL2ForwardedTotalPkts'   => '1.3.6.1.4.1.9.9.97.1.1.1.1.3',
 	    'portIfIndex'               => '1.3.6.1.4.1.9.5.1.4.1.1.11',
 	    'portName'                  => '1.3.6.1.4.1.9.5.1.4.1.1.4',
+	    'portAdminSpeed'            => '1.3.6.1.4.1.9.5.1.4.1.1.9',
+	    'portDuplex'                => '1.3.6.1.4.1.9.5.1.4.1.1.10',
            );
 
 ### Misc private stuff...
 
 my %l2stats;
 my $script = "Catalyst CatOS genDevCOnfig plugin";
+
+my @DuplexTable = ( "Half", "Full", "Disagree", "Auto" );
+
+my %SpeedTable = ( 1 => "autoDetect" ,
+                                4000000       => "4 Mbps",
+                                10000000     => "10 Mbps",
+                                16000000     => "16 Mbps",
+                                45000000     => "45 Mbps",
+                                64000000     => "64 Mbps",
+                                100000000   => "100 Mbps",
+                                155000000   => "155 Mbps",
+                                400000000   => "400 Mbps",
+                                622000000   => "622 Mbps",
+                                1000000000 => "1 Gbps",
+                                1544000       => "1.544 Mbps",
+                                2000000       => "2 Mbps",
+                                2048000       => "2.048 Mbps",
+                                64000           => "64 kps",
+                                10                => "10 Gps"
+	);
 
 ###############################################################################
 # plugin_name
@@ -152,6 +174,10 @@ sub custom_targets {
 
     my %portifindex = reverse gettable('portIfIndex');
 
+    my %portAdminSpeed = gettable('portAdminSpeed');
+
+    my %portDuplex = gettable('portDuplex');
+
     foreach my $index (keys %portifindex) {
         ### This is "module.port".
         my ($s, $p) = split (/\./,$portifindex{$index});
@@ -160,11 +186,19 @@ sub custom_targets {
         ### Rename the interface description to something useful
         $ifdescr{$index} = "port$s\_$p";
 
+	Debug("XXX: $index $portifindex{$index} ");
+	
+	Debug("XXX: Admin Speed $portAdminSpeed{$portifindex{$index}}");
+	Debug("XXX: Duplex $portDuplex{$portifindex{$index}}");
+
         ### Build a mapping between the portName and the ifIndex index.
         $intdescr{$index} = $intdescr{$portifindex{$index}};
+        $intdescr{$index} .= "<BR>Admin Speed $SpeedTable{$portAdminSpeed{$portifindex{$index}}}<BR>Duplex $DuplexTable[$portDuplex{$portifindex{$index}}-1]($portDuplex{$portifindex{$index}})<BR>";
         ### Build a mapping between the ifDescr and its associated Slot.
+	Debug("XXX: \$slotPortList{$ifdescr{$index}} = $s;");
         $slotPortList{$ifdescr{$index}} = $s;
         ### Build a mapping between the Slot number and its name.
+	Debug(qq(XXX: \$slotNameList{$s} = "Slot_$s";));
         $slotNameList{$s} = "Slot_$s";
         ### Build a list of existing slots.
         $slotList{$s}++;
