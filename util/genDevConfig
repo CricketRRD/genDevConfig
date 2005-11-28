@@ -56,6 +56,7 @@ no strict 'refs';
 
 
 use Getopt::Long;
+use Pod::Usage;
 use snmpUtils;
 use Common::Log;
 use Socket;
@@ -75,133 +76,9 @@ Common::Log::setFormat('minimal');
 my $VERSION = 'genDevConfig 2.0.0beta12';
 
 ###############################################################################
-
-sub usage {
-#'
-    print STDERR <<EOD;
-VERSION: $VERSION
-USAGE: $0 [options] hostname
-
-   --b                   - Report speeds in bytes/second rather than
-   --bytes                 bits/second.
-   -c <community>        - Set SNMP read community, by default not added
-   --community <community> to target configuration. 
-                           (if community unset it will default to: public)
-   -C <community>        - Set SNMP read community and include it in the config.
-   --addcommunity <community>   - Same as -C
-   --communityrw <community-rw>
-                          - Include the snmp-rw string in the config
-                               (only useful with getRunningConfig script)
-                               (which is used for backing up the devices)
-                               (configuration via SNMP and tftp in CVS)
-
-   -d <list>             - Don't collect interfaces with these types.  <list>
-   --dontcollect <list>    is a comma separated list on numeric interface
-                           types.
-   -e <regex>            - Interfaces types that match the given regular
-   --exception <regex>     expression are exceptions to the 'dontcollect' list.
-                           Can be used multiple times. Case insensitive.
-   -h                    - Print this message.
-   --help
-   --default "key:text"  - Add arbitrary values to the --default-- entry
-                           of a target. Double-quoted value pairs.
-			   This option can be used multiple times.
-                           Example: --default "admin-grp:network"
-   -i       "key:text"   - Arbitrary values to be stored in chassis target
-                           of the devices config-tree. Double-quoted value
-			   pairs.
-   --info   "key:text"     This option can be used multiple times.
-                           Double-quoted value pairs.
-                           Example: -i "testsla:true"
-                                    -i "pagergroup:admins"
-   --ip <ip>             - Specify an alternate ip address for the device
-                           in case the hostname should not be resolved. 
-			   Most people use an IP or HOSTNAME for the hostname
-			   option, but due to natting and firewalled zones,
-			   it may be necessary to specify the IP and the hostname
-			   directly on the command-line.
-   --loglevel <level>    - Set Verbose Level 
-                           debug, monitor, info, warn, error
-                           Default level is "warn"
-   -l                    - Force all subdirectory names to lowercase.
-   --lowercase
-   --modular             -  Treat the device as modular; that is, generate
-                            subdirectories for each module and place that
-                            module's interfaces or ports inside. Note that
-                            not including this option when processing a modular
-                            device will work just fine. You just won't get the
-                            hierarchical layout of the interfaces.
-   -m                    - Enable threshold monitoring on the target.
-   --monitors               Configure templates in config-tree Defaults.
-   -n                    - Disable Address to Name instance mapping
-   --nodns
-   --noframestats          Report frame relay interface stats. (BECN/FECN)
-   --nortragents         - Collect data on all active SAA (RTR) Agents
-                               (only useful on Cisco routers)
-                               (OperStatus must be 6 (active) to be included)
-   --namedonly           - Comment out all interfaces that have no description.
-                               (Supported for most plateforms)
-   --nodupwarn           - Don't put warnings about hard coded inst numbers on
-                           the generated HTML pages.
-   --nomtucheck          - Don't check for insane mtu, use it for interactive
-                           discovery.
-   --nospeedcheck        - Don't check for insane speed, use it for interactive
-                           discovery.
-   -o                    - Specify the output directory where the targetname
-   --outputdir <relativepath/>    subdir will be created in the config-tree. This
-                           path is relative to:
-			   \$crickethome/config-tree/
-                           Ex. --ouputdir genconfig/routers/
-			   
-   --showunused            - Show unused (commented out) interfaces from the
-                           config entirely.  This also affects interfaces
-                           commented out with --namedonly.
-
-   -P xxx                - Pass flag 'xxx' and possibly value 'yyy' to the 
-   -P xxx=yyy               vendor specific plugin.  Can be used multiple times.
-   -P h                  - print the vendor specific module's help info
-                           and exit.
-   -P help                 This is a special case of '-P xxx'.
-
-   -p <portlist>         - Collect data for the listed ports only.
-   --ports <portlist>      "0/*,1/5-7,4/6" Example of supported syntax.
-                           Dont forget to double quote your comma delimited list.
-   --forceplugin <name>  - Explicitly select the vendor specific plugin that
-                           will be used with this device. Use this option in
-			   case the device matches multiple plugins.
-
-   --gigonly             - This will process only the gigabit interfaces with
-                           full threholds and collection.
-                           *This will comment out all interfaces of less than gigabit speed.
-   --sortby <key>        - Arbitrary values to store in cricket config-tree
-                           Primarly used for display and sorting in outside scripts
-                           Adds to the chassis target: sortby = <key>
-                               (valid for all equipments)
-   -2                    - Use SNMP version 2c and retrieve high capacity
-   --snmpv2c               counters where possible. Will still use snmpv1
-                           for non interface counters.
-   --version             - Display version information
-   --vendorint           - Get extra interface stats from proprietary MIB (For CiscoIOS and CatalystOS) or MIB-II (for all others).
-                           This uses more data sources in the resulting RRD.
-                           Support for Cisco, Foundry, rfc1643 Etherlike.
-   --vlans               - Display VLAN interfaces (should you want them?)
-                           Add VLANs to the targets file. They are normally skipped.
-   --voip                - Report VoIP peer stats
-
-NOTE: Options are case sensitive.
-
-EXAMPLE:  $0 -c public -2 --namedonly MyRouterName
-
-EOD
-#'
-    exit(1);
-}
-
-
 sub version {
-
     print STDOUT "VERSION: $VERSION\n";
-    exit(0);
+    exit;
 }
 ###############################################################################
 
@@ -426,7 +303,7 @@ if ($recomp) {
 ###############################################################################
 
 ### Process command-line arguments
-usage() if (!defined($ARGV[0]));
+pod2usage("No hostname given. Use --help for help.") unless defined $ARGV[0];
 
 # Set the default logging level
 Common::Log::setLevel($opts{logLevel});
@@ -444,7 +321,7 @@ GetOptions("bytes|b"		=> sub {$opts{units} = 'bytes';},
            "exception|e=s"	=>sub {my($opt,$value) = @_; push (@EXCEPTIONS, split(/\s*,\s*/, $value));},
            "framestats|f!"	=>\$opts{req_framestats},
            "getconfig|g"	=>\$opts{req_getconfig},
-           "help|h!"	=> \&usage,
+           "help|h!"	=> \&pod2usage(1),
            "lowercase|l"	=>\$opts{lowercase},
            "namedonly"		=>\$opts{req_namedonly},
            "nodupwarn"		=>\$opts{nodupwarn},
@@ -474,7 +351,7 @@ GetOptions("bytes|b"		=> sub {$opts{units} = 'bytes';},
            "P:s"		=>\&pluginflags,
 	   );
 
-usage() if (@ARGV != 1);
+pod2usage() unless scalar @ARGV == 1;
 
 ### Set general arguments
 
@@ -1611,7 +1488,7 @@ sub getOutputDir {
 # Options munging
 sub deprecatedoption {
     Warn ("You have used a deprecated option check usage. $_");
-    usage();
+    pod2usage();
 }
 sub portlist {
     my($opt,$value) = @_;
@@ -1657,3 +1534,207 @@ sub setOutputDir {
 #        'monitor-thresholds' => $_ ,
 #        );
 #    }
+
+
+__END__
+
+=head1 NAME
+
+genDevConfig [options] hostname
+
+=head1 SYNOPSIS
+
+genDevConfig --snmpv2c --namedonly --community=public <hostname>
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-b>, B<--bytes>
+
+Report speeds in bytes/second rather than bits/second.
+
+=item B<-c <community>>, B<--community=<community>>
+
+Use the specified SNMP read community string.
+If the community string is not set it will default to "public".
+
+Note that by default the community string given here will not be added to the
+generated configuration file (see L<-C <community>> below). This allows the
+community string used to be inherited from further up in the config three.
+
+=item B<-C <community>>, B<--addcommunity=<community>>
+
+Like L<-c <community>> abive except it saves the SNMP read community string in
+the generated configuration.
+
+=item B<--communityrw=<community-rw>>
+
+Include the snmp-rw string in the config.
+
+This is only useful with getRunningConfig script which is used for backing up
+the device configuration via SNMP and TFTP in CVS.
+
+=item B<-d <list>>, B<--dontcollect=<list>>
+
+Do not collect interfaces with these types. The argument is a comma separated
+list of numeric interface types.
+
+=item B<-e <regex>>, B<--exception=<regex>>
+
+Interfaces types that match the given regular expression are exceptions to the
+L<--dontcollect> list. Can be used multiple times. Case insensitive.
+
+=item B<-h>, B<--help>
+
+Print this message.
+
+=item B<--default="key:text">
+
+Add arbitrary values to the --default-- entry of a target. Double-quoted value
+pairs. This option can be used multiple times.
+
+Example: --default="admin-grp:network"
+
+=item B<-i "key:text">, B<--info="key:text">
+
+Arbitrary values to be stored in chassis target of the devices config-tree.
+Double-quoted value pairs. This option can be used multiple times.
+
+Example: -i "testsla:true"
+         -i "pagergroup:admins"
+
+=item B<--ip=<ip>>
+
+Specify an alternate ip address for the device in case the hostname can not be
+resolved. Most people use an IP or HOSTNAME for the hostname option, but due to
+natting and firewalled zones, it may be necessary to specify the IP and the
+hostname directly on the command-line.
+
+=item B<--loglevel=<level>>
+
+Set Verbose Level to one of "debug", "monitor", "info", "warn", or "error".
+Default level is "warn".
+
+=item B<-l>, B<--lowercase>
+
+Force all subdirectory names to lowercase.
+
+=item B<--modular>
+
+Treat the device as a modular device; that is, generate subdirectories for each
+module and place that module's interfaces or ports inside. Note that not
+including this option when processing a modular device will work just fine.
+You just won't get the hierarchical layout of the interfaces.
+
+=item B<-m>, B<--monitors>
+
+Enable threshold monitoring on the target.
+Configure templates in config-tree Defaults.
+
+=item B<-n>, B<--nodns>
+
+Disable Address to Name instance mapping
+
+=item B<--noframestats>
+
+Report frame relay interface stats. (BECN/FECN)
+
+=item B<--nortragents>
+
+Collect data on all active SAA (RTR) Agents. This option is only useful on
+Cisco routers. Note that "OperStatus" must be "6" (active) to be included.
+
+=item B<--namedonly>
+
+Comment out all interfaces that have no description.
+This option is supported for most plateforms, but not all.
+
+=item B<--nodupwarn>
+
+Don not put warnings about hard coded inst numbers on the generated HTML pages.
+
+=item B<--nomtucheck>
+
+Don not check for insane MTU, use it for interactive discovery.
+
+=item B<--nospeedcheck>
+
+Don not check for insane speed, use it for interactive discovery.
+
+=item B<-o>, B<--outputdir=<path>>
+
+Specify the output directory where the targetname subdir will be created in the
+config-tree. This path is relative to \$crickethome/config-tree/.
+
+Example: --ouputdir=genconfig/routers/
+
+=item B<--showunused>
+
+Show unused (commented out) interfaces from the config entirely. This also
+affects interfaces commented out with --namedonly.
+
+=item B<-P [<option>|<option>=<value>]>
+
+Pass the named option and possibly value to the vendor specific plugin.
+Can be used multiple times.
+
+=item B<-P h>, B<-P help>
+
+Print the vendor specific module help info and exit.
+This is a special case of the "-P <option>" syntax.
+
+=item B<-p <portlist>>, B<--ports=<portlist>>
+
+Collect data for the listed ports only. Dont forget to double quote the list.
+
+Example: --ports="0/*,1/5-7,4/6"
+
+=item B<--forceplugin=<name>>
+
+Explicitly select the vendor specific plugin that will be used with this device.
+Use this option in case the device matches multiple plugins.
+
+=item B<--gigonly>
+
+This will process only the gigabit interfaces with full threholds and collection.
+This will comment out all interfaces of less than gigabit speed.
+
+=item B<--sortby=<key>>
+
+Arbitrary values to store in cricket config-tree
+Primarly used for display and sorting in outside scripts
+Adds to the chassis target: sortby = <key>
+
+=item B<-2>, B<--snmpv2c>
+
+Use SNMP version 2c and retrieve high capacity counters where possible.
+Will still use snmpv1 for non interface counters.
+
+=item B<--version>
+
+Display version information
+
+=item B<--vendorint>
+
+Get extra interface stats from proprietary MIB (For Cisco IOS and CatOS) or
+MIB-II (for all others). This uses more data sources in the resulting RRD.
+Support for Cisco, Foundry, and rfc1643 Etherlike.
+
+=item B<--vlans>
+
+Display VLAN interfaces (should you want them)
+Add VLANs to the targets file. They are normally skipped.
+
+=item B<--voip>
+
+Report VoIP peer stats
+
+=back
+
+=head1 DESCRIPTION
+
+B<genDevConfig> will attempt to discover a device using SNMP and generate a
+B<Cricket> config-tree node for it.
+
+=cut
