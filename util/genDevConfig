@@ -39,7 +39,6 @@ BEGIN { # Try to find the config; one level below $0, or in other likely places.
 use lib "$Common::global::gInstallRoot/lib";
 use lib "$Common::global::gInstallRoot/plugins/genConfig";
 use strict;
-no strict 'refs';
 
 
 use Getopt::Long;
