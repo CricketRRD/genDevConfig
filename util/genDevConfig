@@ -32,36 +32,52 @@ BEGIN { # Try to find the config; one level below $0, or in other likely places.
           unless $Common::global::gInstallRoot;
         eval q(require "$_/cricket/cricket-conf.pl")
           unless $Common::global::gInstallRoot;
-   }
+    }
     $Common::global::gInstallRoot ||= $programdir;
 }
 
+#
+# Pragma; strict mode and add our own module dirs to the path.
+use strict;
 use lib "$Common::global::gInstallRoot/lib";
 use lib "$Common::global::gInstallRoot/plugins/genConfig";
-use strict;
 
 
+#
+# Load external modules.
 use Getopt::Long;
 use Pod::Usage;
-use snmpUtils;
-use Common::Log;
 use Socket;
 use Net::hostent;
+
+#
+# Load modules inherited from Cricket proper.
+use snmpUtils;
+use Common::Log;
+use ConfigTree::Cache;      ### Used for monitor threshold processing
+
+#
+# Load internal modules.
 use genConfig::File;        ### File methods and subdir.
 use genConfig::SNMP;        ### SNMP get and gettable.
 use genConfig::Utils;       ### Misc
 use genConfig::pluginUtils; ### Plugin processing
-use ConfigTree::Cache;      ### Used for monitor threshold processing
 
-# Yes it is a copy, but I would rather avoid having -> dereferences or other
-# stuff obfuscating the code.
+
+#
+# Set log format.
+Common::Log::setFormat('minimal');
+
+#
+# Get a copy of the ifType table.
 my %ifType_d = ();
 {
   no warnings qw|once|; # Silence -w.
   %ifType_d = %genConfig::Utils::ifType_d;
+  # Yes it is a copy, but I would rather avoid having -> dereferences or other
+  # stuff obfuscating the code.
 }
 
-Common::Log::setFormat('minimal');
 
 my $VERSION = 'genDevConfig 2.0.0beta12';
 
@@ -292,56 +308,61 @@ if ($recomp) {
 ###
 ###############################################################################
 
-### Process command-line arguments
-pod2usage("No hostname given. Use --help for help.") unless defined $ARGV[0];
-
+#
 # Set the default logging level
 Common::Log::setLevel($opts{logLevel});
 
+#
 # Set default processing for case sensitivity in GetOptions
 $Getopt::Long::ignorecase = 0;
 
-GetOptions("bytes|b"		=> sub {$opts{units} = 'bytes';},
-           "community|c=s"	=>\$opts{community},
-           "addcommunity|C=s"	=> sub {my($opt,$value)=@_; $opts{community}=$value; $opts{addcomm}=1;},
-           "communityrw=s"	=>\$opts{communityrw},
-           "ciscoint"		=>\&deprecatedoption,
-           "vendorint|extendedint"=> sub {$opts{req_extendedint} = 1; $opts{req_vendorint} = 1;},
-           "dontcollect|d=s"	=>sub {my($opt,$value) = @_; push (@DONTCOLLECT, split(/\s*,\s*/, $value));},
-           "exception|e=s"	=>sub {my($opt,$value) = @_; push (@EXCEPTIONS, split(/\s*,\s*/, $value));},
-           "framestats|f!"	=>\$opts{req_framestats},
-           "getconfig|g"	=>\$opts{req_getconfig},
-           "help|h!"	=> \&pod2usage(1),
-           "lowercase|l"	=>\$opts{lowercase},
-           "namedonly"		=>\$opts{req_namedonly},
-           "nodupwarn"		=>\$opts{nodupwarn},
-           "nounused"		=>\&deprecatedoption,
-           "vlans"		=>\$opts{req_vlans},
-           "modular|mod"	=>\$opts{req_modular},
-           "monitors|m"		=>\$opts{monitors},
-           "nodns|n"		=>\$opts{nodns},
-           "showunused"		=>sub {$opts{nounused} = 0;},
-           "nospeedcheck"	=>\$opts{force_nospeedcheck},
-           "nomtucheck"		=>\$opts{force_nomtucheck},
-           "outputdir|o=s"	=>\&setOutputDir,
-           "ports|p=s"		=>\&portlist,
-           "defaults=s"		=>\&defaults,
-           "info|i=s"		=>\&info,
-           "ip=s"		=>\$opts{ip},
-           "sortby=s"		=>sub {my($opt,$value)=@_; $opts{sortby}=$value;},
-           "rtragents!"		=>\$opts{rtragents},
-           "nucast"		=>\$opts{nucast},
-           "gigonly"		=>\$opts{gigonly},
-           "core"		=>\$opts{coreint},
-           "version"		=>\&version,
-           "loglevel=s"		=>sub {my($opt,$value)=@_; $opts{logLevel}=$value;},
-           "voip"		=>\$opts{req_voip},
-           "snmpv2c|2"		=>\$opts{req_usev2c},
-           "forceplugin=s"	=>sub {my($opt,$value)=@_; $opts{plugin}=$value;},
-           "P:s"		=>\&pluginflags,
-	   );
+#
+# Process command-line arguments
+GetOptions(
+  "bytes|b"               => sub {$opts{units} = 'bytes';},
+  "community|c=s"         => \$opts{community},
+  "addcommunity|C=s"      => sub {$opts{community} = $_[1]; $opts{addcomm} = 1;},
+  "communityrw=s"         => \$opts{communityrw},
+  "ciscoint"              => \&deprecatedoption,
+  "vendorint|extendedint" => sub {$opts{req_extendedint} = 1; $opts{req_vendorint} = 1;},
+  "dontcollect|d=s"       => sub {push @DONTCOLLECT, split /\s*,\s*/, $_[1]},
+  "exception|e=s"         => sub {push @EXCEPTIONS,  split /\s*,\s*/, $_[1]},
+  "framestats|f!"         => \$opts{req_framestats},
+  "getconfig|g"           => \$opts{req_getconfig},
+  "help|h!"               => sub {pod2usage(1)},
+  "lowercase|l"           => \$opts{lowercase},
+  "namedonly"             => \$opts{req_namedonly},
+  "nodupwarn"             => \$opts{nodupwarn},
+  "nounused"              => \&deprecatedoption,
+  "vlans"                 => \$opts{req_vlans},
+  "modular|mod"           => \$opts{req_modular},
+  "monitors|m"            => \$opts{monitors},
+  "nodns|n"               => \$opts{nodns},
+  "showunused"            => sub {$opts{nounused} = 0;},
+  "nospeedcheck"          => \$opts{force_nospeedcheck},
+  "nomtucheck"            => \$opts{force_nomtucheck},
+  "outputdir|o=s"         => \&setOutputDir,
+  "ports|p=s"             => \&portlist,
+  "defaults=s"            => \&defaults,
+  "info|i=s"              => \&info,
+  "ip=s"                  => \$opts{ip},
+  "sortby=s"              => \$opts{sortby},
+  "rtragents!"            => \$opts{rtragents},
+  "nucast"                => \$opts{nucast},
+  "gigonly"               => \$opts{gigonly},
+  "core"                  => \$opts{coreint},
+  "version"               => \&version,
+  "loglevel=s"            => \$opts{logLevel},
+  "voip"                  => \$opts{req_voip},
+  "snmpv2c|2"             => \$opts{req_usev2c},
+  "forceplugin=s"         => \$opts{plugin},
+  "P:s"                   => \&pluginflags,
+);
 
-pod2usage() unless scalar @ARGV == 1;
+#
+# Exit with brief message if no hostname was given.
+pod2usage("No hostname given. Use --help for help.\n") unless defined $ARGV[0];
+
 
 ### Set general arguments
 
