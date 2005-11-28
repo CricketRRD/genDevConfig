@@ -1,12 +1,10 @@
-#! /usr/bin/perl -w
-# -*- mode: Perl -*-
+#!/usr/bin/perl -w -- -*- mode: Perl -*-
 ##############################################################################
 #
 # genDevConfig - Generate Cricket config tree for various network devices.
 #
-#                See INSTALLATION.genDevConfig for more info.
-#
 #    Copyright (C) 2000 Mike Fisher and Tech Data Corporation
+#    Copyright (C) 2002-2005 Francois Mikus  "fmikus" . "@" . "acktomic.com"
 #   
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -22,28 +20,17 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# Created: 03/09/00 - Mike Fisher <mlf at users.sourceforge.net>  (no spam!)
-#                   Based on MRTG 2.8.8 cfgmaker by Tobias Oetiker
-#                   and Cricket 0.71 listInterface by Jeff Allen
-#
-# Re-released: 12/11/02  - Francois Mikus   "fmikus" . "@" . "acktomic.com"
-#                   Based on Mike Fisher's great work.
-#
-# Re-named:    05/03/04  - Francois Mikus   "fmikus" . "@" . "acktomic.com"
-#
-#
-##############################################################################
 package Common::genDevConfig;
 
 require Exporter;
 
 BEGIN { # Try to find the config; one level below $0, or in other likely places.
     my $programdir = (($0 =~ m|^(.*/)|)[0] || "./") . ".";
-    eval "require '$programdir/../cricket-conf.pl'";
-    for (qw[/usr/local/etc /etc]) {
-        eval "require '$_/cricket-conf.pl'"
+    eval q|require "$programdir/../cricket-conf.pl"|;
+    for (qw|/usr/local/etc /etc|) {
+        eval q(require "$_/cricket-conf.pl")
           unless $Common::global::gInstallRoot;
-        eval "require '$_/cricket/cricket-conf.pl'"
+        eval q(require "$_/cricket/cricket-conf.pl")
           unless $Common::global::gInstallRoot;
    }
     $Common::global::gInstallRoot ||= $programdir;
