@@ -56,7 +56,11 @@ use ConfigTree::Cache;      ### Used for monitor threshold processing
 
 # Yes it is a copy, but I would rather avoid having -> dereferences or other
 # stuff obfuscating the code.
-my %ifType_d = %genConfig::Utils::ifType_d;
+my %ifType_d = ();
+{
+  no warnings qw|once|; # Silence -w.
+  %ifType_d = %genConfig::Utils::ifType_d;
+}
 
 Common::Log::setFormat('minimal');
 
@@ -345,8 +349,11 @@ pod2usage() unless scalar @ARGV == 1;
 # Set it to the optional user defined level
 Common::Log::setLevel($opts{logLevel});
 
-$Common::global::monitors = $opts{monitors};
-$Common::global::outputdir_ct = $opts{outputdir_ct};
+{
+  no warnings qw|once|; # Silence -w.
+  $Common::global::monitors = $opts{monitors};
+  $Common::global::outputdir_ct = $opts{outputdir_ct};
+}
 
 # Log run time, just in case we are not running in standard or extended
 # logging format.
