@@ -51,13 +51,6 @@ my @types = ( 'IOS ',
 ### SAA RTR Agent type definitions.
 ###############################################################################
 
-my (%rttAgentType) = ( '2' =>  'saa-rtt',
-                       '3' => 'saa-udpecho',
-                       '25' => 'saa-http',
-                       '27' => 'saa-jitter',
-                       '30' => 'saa-ftp'
-                     ); 
-
 my(%rttprotocol)=('1'   =>  'notApplicable',
                   '2'   =>  'ipIcmpEcho',
                   '3'   =>  'ipUdpEchoAppl',
@@ -87,7 +80,12 @@ my(%rttprotocol)=('1'   =>  'notApplicable',
                   '27'  =>  'jitterAppl',
                   '28'  =>  'dlswAppl',
                   '29'  =>  'dhcpAppl',
-                  '30'  =>  'ftpAppl');
+                  '30'  =>  'ftpAppl'
+                  '31'  =>  'mplsLspPingAppl',
+                  '32'  =>  'voipAppl',
+                  '33'  =>  'rtpAppl',
+                  '34'  =>  'icmpJitterAppl'
+                 );
 
 # These are the OIDS used by this plugin
 # the OIDS should only be those necessary for index mapping or
@@ -153,6 +151,7 @@ my %OIDS = (
        ### from mib-2.transmission.dialControlMib.dialControlMibObjects.
        ###      dialCtlPeer.dialCtlPeerCfgTable.dialCtlPeerCfgEntry.
        'dialCtlPeerCfgOriginateAddress' => '1.3.6.1.2.1.10.21.1.2.1.1.4',
+       'dialCtlPeerCfgIfType' => '1.3.6.1.2.1.10.21.1.2.1.1.2',
 
       );
 
@@ -161,7 +160,7 @@ my %OIDS = (
 ###############################################################################
 
 my (%frCircuitState, %cfrExtCircuitSubifIndex);
-my %PeerCfgOrigAddr;
+my (%PeerCfgOrigAddr, %PeerCfgIfType);
 my $peerid;
 my $snmp;
 my $customfile;
@@ -304,6 +303,12 @@ sub discover {
     } elsif ($opts->{model} =~ /3600/) {
         $opts->{chassisttype} = 'Cisco-3600-Router';
         $opts->{chassisname} = 'Chassis';
+   } elsif ($opts->{model} =~ /2800/) {
+        $opts->{chassisttype} = 'Cisco-2800-Router';
+        $opts->{chassisname} = 'Chassis';
+    } elsif ($opts->{model} eq "C1200") {
+        $opts->{chassisttype} = 'Cisco-1200-AP';
+        $opts->{chassisname} = 'Chassis';
     } elsif ($opts->{model} =~ /2600/) {
         $opts->{chassisttype} = 'Cisco-2600-Router';
         $opts->{chassisname} = 'Chassis';
@@ -428,6 +433,7 @@ sub custom_targets {
 
     if ($opts->{voip}) {
         %PeerCfgOrigAddr = gettable('dialCtlPeerCfgOriginateAddress');
+        %PeerCfgIfType   = gettable('dialCtlPeerCfgIfType');
     }
 
     ### Get SAA(RTR) Agent information if needed.
@@ -560,6 +566,7 @@ sub custom_targets {
                     ($policydirection) = get('cbQosPolicyDirection' . "." . $pol_id_cell); 
                     $policydirection = $policydirection == 1 ? "input" : "output";
                     ($ifindex) = get('cbQosIfIndex' . "." . $pol_id_cell);
+                    Debug ("ifindex=$ifindex, policydirection=$policydirection, pol_id_cell=$pol_id_cell");
                     $ifdescr = $ifdescr{$ifindex} . "." . $ifindex;
                     $ifacedescr = $ifdescr;
                     $ifacedescr =~ s/[\/\s:,\.]/\_/g;
@@ -675,12 +682,12 @@ if ($opts->{rtragents} && %rttMonCtrlOperState) {
         next if ($rttMonCtrlOperState{$key} != 6);
 
         my ($protocol) = $rttprotocol{$rttMonEchoAdminProtocol{$key}};
-        my ($type)     = $rttAgentType{$rttMonEchoAdminProtocol{$key}};
-        next if (!defined $type);
+        next if ($key == 1); # Invalid protocol
         my ($address) = translateRttTargetAddr($type, $rttMonEchoAdminTargetAddress{$key});
-        $ldesc = 'SAA(RTR) Performance agent for round-trip time using ' . $protocol . ' for destination <B>'. $address . " - " . $rttMonCtrlAdminTag{$key} . '</B><BR>Operational values: 1(Ok) 2(Disconnct) 4(Timeout) 5(Busy) 6(NoConnection) 7(LackIntRes) 8(BadSeqID) 9(BadData) 16(Error)' ;
+        $ldesc = 'Cisco SLA (RTR) using ' . $protocol . ' for destination <B>'. $address . " - " . $rttMonCtrlAdminTag{$key} . '</B>';
+        #ICMP Operational values: <BR>Operational values: 1(Ok) 2(Disconnct) 4(Timeout) 5(Busy) 6(NoConnection) 7(LackIntRes) 8(BadSeqID) 9(BadData) 16(Error)' ;
 
-        $sdesc = 'SAA(RTR) Performance agent for round-trip time using ' . $protocol .
+        $sdesc = 'Cisco SLA (RTR) using ' . $protocol .
                  ' for destination ip: ' . $address . ' tag: ' . $rttMonCtrlAdminTag{$key};
 
         #Debug ("Destination for $key tag: $rttMonCtrlAdminTag{$key} addr: $address\n");
@@ -714,6 +721,10 @@ if ($opts->{voip} && %PeerCfgOrigAddr) {
         'directory-desc' => 'Dial Peer Stats',
         'target-type'    => 'dial-peer',
         );
+    foreach my $key (keys %PeerCfgOrigAddr) {
+      Debug ("PeerCfgOrigAddr for peer $key: $PeerCfgOrigAddr{$key}\n");
+    }
+
 } else {
     $opts->{voip} = 0;
 }
@@ -776,6 +787,7 @@ sub custom_interfaces {
 	# Set any non-sticky variables
 	$opts->{show_max} = 0; # Do not display max and max_octets for dp interfaces
 	$opts->{nomtucheck} = 1; # Do not skip the interface due to insane mtu
+        $opts->{nospeedcheck} = 1; #Do not skip the interface due to insane speed
 
         $match = 1;
 
