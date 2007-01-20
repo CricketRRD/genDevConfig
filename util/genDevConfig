@@ -1272,14 +1272,13 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     ### This takes into account the possible need for ifHighSpeed for
     ### faster interfaces.
 
-    my $max = !defined($ifspeed{$index}) ? undef :
-        (int($ifspeed{$index}) eq 0) ? '' :
+    my $max = !($ifspeed{$index}) ? undef :
 	    ($ifspeed{$index} == 0xffffffff && defined($ifHighSpeed{$index}) &&
 	        $ifHighSpeed{$index} > 0) ? int(1000000*$ifHighSpeed{$index}) :
 		    int($ifspeed{$index});
     
-    my $maxoctets = ($max) ? int($max/8) : '';
-    if ($opts{show_max} == 1 && $max) {
+    my $maxoctets = defined($max) ? int($max/8) : undef;
+    if ($opts{show_max} == 1 && defined($max)) {
 	push(@config,
         'rrd-max'             => $max,
         'rrd-max-octets'      => $maxoctets,
