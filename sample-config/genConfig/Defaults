@@ -99,6 +99,30 @@ OID     dot3StatsCarrierSenseErrors       1.3.6.1.2.1.10.7.2.1.11
 OID     dot3StatsFrameTooLongs            1.3.6.1.2.1.10.7.2.1.13
 OID     dot3StatsDuplexStatus             1.3.6.1.2.1.10.7.2.1.19
 
+# T1 Controller OIDS from RFC1406
+# The number of Errored Seconds
+OID    dsx1CurrentESs          1.3.6.1.2.1.10.18.7.1.2
+# The number of Severely Errored Seconds
+OID    dsx1CurrentSESs         1.3.6.1.2.1.10.18.7.1.3
+# The number of Severely Errored Framing Seconds
+OID    dsx1CurrentSEFSs        1.3.6.1.2.1.10.18.7.1.4
+# The number of Unavailable Seconds
+OID    dsx1CurrentUASs         1.3.6.1.2.1.10.18.7.1.5
+# The number of Controlled Slip Seconds
+OID    dsx1CurrentCSSs         1.3.6.1.2.1.10.18.7.1.6
+# The number of Path Coding Violations
+OID    dsx1CurrentPCVs         1.3.6.1.2.1.10.18.7.1.7
+# The number of Line Errored Seconds
+OID    dsx1CurrentLESs         1.3.6.1.2.1.10.18.7.1.8
+# The number of Bursty Errored Seconds
+OID    dsx1CurrentBESs         1.3.6.1.2.1.10.18.7.1.9
+# The number of Degraded Minutes
+OID    dsx1CurrentDMs          1.3.6.1.2.1.10.18.7.1.10
+# The number of Line Code Violations
+OID    dsx1CurrentLCVs         1.3.6.1.2.1.10.18.7.1.11
+
+
+
 ###############################################################################
 #
 # Datasources define the type of data and the period of the data retrieved
@@ -185,6 +209,38 @@ datasource	ifHCOutMulticastPkts
 	ds-source	=	snmp://%snmp%/ifHCOutMulticastPkts.%inst%
 datasource	ifHCOutBroadcastPkts        
 	ds-source	=	snmp://%snmp%/ifHCOutBroadcastPkts.%inst%
+
+# Datasources for T1 controllers
+datasource dsx1CurrentESs
+    ds-source  = snmp://%snmp%/dsx1CurrentESs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentSESs
+    ds-source  = snmp://%snmp%/dsx1CurrentSESs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentSEFSs
+    ds-source  = snmp://%snmp%/dsx1CurrentSEFSs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentUASs
+    ds-source  = snmp://%snmp%/dsx1CurrentUASs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentCSSs
+    ds-source  = snmp://%snmp%/dsx1CurrentCSSs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentPCVs
+    ds-source  = snmp://%snmp%/dsx1CurrentPCVs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentLESs
+    ds-source  = snmp://%snmp%/dsx1CurrentLESs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentBESs
+    ds-source  = snmp://%snmp%/dsx1CurrentBESs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentDMs
+    ds-source  = snmp://%snmp%/dsx1CurrentDMs.%inst%
+    rrd-ds-type = GAUGE
+datasource dsx1CurrentLCVs
+    ds-source  = snmp://%snmp%/dsx1CurrentLCVs.%inst%
+    rrd-ds-type = GAUGE
 
 ###############################################################################
 #
@@ -335,6 +391,17 @@ targetType	sub-interface
 targetType	sub-interface-hc
 	ds		=	"ifHCInOctets, ifHCOutOctets"
 	view	=	"Octets: ifHCInOctets ifHCOutOctets"
+
+targetType dsx-controller
+    ds     =   "dsx1CurrentESs, dsx1CurrentSESs, dsx1CurrentSEFSs,
+                 dsx1CurrentUASs, dsx1CurrentCSSs, dsx1CurrentPCVs,
+                 dsx1CurrentLESs, dsx1CurrentBESs, dsx1CurrentDMs, dsx1CurrentLCVs"
+    view    =   "Errors: dsx1CurrentPCVs dsx1CurrentLCVs,
+                 Line: dsx1CurrentLCVs dsx1CurrentLESs,
+                 ErroredSec: dsx1CurrentESs dsx1CurrentSESs dsx1CurrentSEFSs
+                   dsx1CurrentCSSs dsx1CurrentBESs,
+                 Service: dsx1CurrentUASs dsx1CurrentDMs"
+
 
 ###############################################################################
 #
@@ -702,3 +769,55 @@ graph  dot3StatsDuplexStatus
     y-min       =   0
     y-max       =   3
     legend    =   "Duplex status:<br><ul><li>(1) unknown<li>(2) half<li>(3) full</ul>"
+
+graph dsx1CurrentESs
+    color       =   red
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Errored Seconds"
+graph dsx1CurrentSESs
+    color       =   green
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Severely Errored Seconds"
+graph dsx1CurrentSEFSs
+    color       =   blue
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Severely Errored Framing Seconds"
+graph dsx1CurrentUASs
+    color       =   green
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Unavailable Seconds"
+graph dsx1CurrentCSSs
+    color       =   orange
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Controlled Slip Seconds"
+graph dsx1CurrentPCVs
+    color       =   green
+    y-axis      =   "#/15min"
+    units       =   "#"
+    legend      =   "The number of Path Coding Violations"
+graph dsx1CurrentLESs
+    color       =   green
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Line Errored Seconds"
+graph dsx1CurrentBESs
+    color       =   dark-green
+    y-axis      =   "#sec/15min"
+    units       =   "sec"
+    legend      =   "The number of Bursty Errored Seconds"
+graph dsx1CurrentDMs
+    color       =   blue
+    y-axis      =   "#min/15min"
+    units       =   "min"
+    legend      =   "The number of Degraded Minutes"
+graph dsx1CurrentLCVs
+    color       =   blue
+    y-axis      =   "#/15min"
+    units       =   "#"
+    legend      =   "The number of Line Code Violations"
+

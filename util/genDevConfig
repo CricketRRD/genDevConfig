@@ -150,7 +150,10 @@ my %OID = (
 
        ### from mib-2.transmission.dot3.dot3StatsTable.dot3StatsEntry
        'dot3StatsIndex'   => '1.3.6.1.2.1.10.7.2.1.1',
-       
+
+       ### from rfc1406.dsx1ConfigTable (6).dsx1ConfigEntry (1).
+       'dsx1TotalIndex' => '1.3.6.1.2.1.10.18.9.1.1',
+ 
         );
 
 ###############################################################################
@@ -638,6 +641,15 @@ if ($opts{req_extendedint}) {
     %dot3statsindex	= reverse gettable('dot3StatsIndex');
 }
 
+
+### Get RFC1406 (T1) Information if needed
+
+my (%dsx1TotalIndex);
+if ($opts{req_extendedint}) {
+    %dsx1TotalIndex = gettable( 'dsx1TotalIndex' );
+}
+
+
 ### Get address to interface mapping info.
 
 my %ipadentaddr     = gettable('ipAdEntAddr');
@@ -875,6 +887,32 @@ if ($opts{wirelessAssociations}) {
 
     $opts{order} -= 1;
 }
+
+### Build RFC1406 T1 Statistics
+
+if ( %dsx1TotalIndex ) {
+    foreach my $key ( keys %dsx1TotalIndex ) {
+
+        my $ifindex = $key;
+        my $ifacedescr = ( 0 != $ifindex ) ? $ifdescr{$ifindex} : "";
+        my $ifacealias = ( 0 != $ifindex ) ? $intdescr{$ifindex} : "";
+        my $mungedname = $ifacedescr;
+        $mungedname =~ s/[\/\s:,\.]/\_/g;
+        my ($targetname) = $mungedname;
+        my $ldesc = "<BR>Controller $ifacedescr<BR>$ifacealias";
+  
+        $file->writetarget($targetname, '',
+         'inst'             => $key,
+         'order'            => $opts->{order},
+         'interface-name'   => $ifacedescr,
+         'long-desc'        => $ldesc,
+         'short-desc'       => $ifacedescr,
+         'target-type'      => 'dsx-controller'
+         );
+        $opts->{order} -= 1;
+    }
+}
+
 
 ### Build an IP address/hostname to interface instance map.
 

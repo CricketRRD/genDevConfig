@@ -60,8 +60,21 @@ OID     rttMonLatestHTTPOperDNSRTT            1.3.6.1.4.1.9.9.42.1.5.1.1.2
 OID     rttMonLatestHTTPOperTCPConnectRTT     1.3.6.1.4.1.9.9.42.1.5.1.1.3
 OID     rttMonLatestHTTPOperTransactionRTT    1.3.6.1.4.1.9.9.42.1.5.1.1.4
 OID     rttMonLatestHTTPOperSense             1.3.6.1.4.1.9.9.42.1.5.1.1.6
-OID	rttMonLatestJitterOperRTTMin          1.3.6.1.4.1.9.9.42.1.5.2.1.4
-OID	rttMonLatestJitterOperRTTMax          1.3.6.1.4.1.9.9.42.1.5.2.1.5
+OID     rttMonLatestJitterOperMOS             1.3.6.1.4.1.9.9.42.1.5.2.1.42
+OID     rttMonLatestJitterOperICPI           1.3.6.1.4.1.9.9.42.1.5.2.1.43
+OID     rttMonLatestJitterOperRTTMin          1.3.6.1.4.1.9.9.42.1.5.2.1.4
+OID     rttMonLatestJitterOperRTTMax          1.3.6.1.4.1.9.9.42.1.5.2.1.5
+OID     rttMonLatestJitterOperPacketLossSD    1.3.6.1.4.1.9.9.42.1.5.2.1.26
+OID     rttMonLatestJitterOperPacketLossDS    1.3.6.1.4.1.9.9.42.1.5.2.1.27
+OID     rttMonLatestJitterOperPacketOutOfSequence 1.3.6.1.4.1.9.9.42.1.5.2.1.28
+OID     rttMonLatestJitterOperPacketMIA       1.3.6.1.4.1.9.9.42.1.5.2.1.29
+OID     rttMonLatestJitterOperPacketLateArrival 1.3.6.1.4.1.9.9.42.1.5.2.1.30
+#These aren't in the Cisco MIB yet (Ray Burkholder made up the names)
+OID     rttMonLatestJitterOperAvgJitter       1.3.6.1.4.1.9.9.42.1.5.2.1.46
+OID     rttMonLatestJitterOperAvgJitterSD     1.3.6.1.4.1.9.9.42.1.5.2.1.47
+OID     rttMonLatestJitterOperAvgJitterDS     1.3.6.1.4.1.9.9.42.1.5.2.1.48
+OID     rttMonLatestJitterOperAvgJitterOWSD   1.3.6.1.4.1.9.9.42.1.5.2.1.49
+OID     rttMonLatestJitterOperAvgJitterOWDS   1.3.6.1.4.1.9.9.42.1.5.2.1.50
 
 # OIDS For Altiga VPN Concentrators 3030 3060
 
@@ -221,7 +234,6 @@ datasource	dialCtlPeerStatsAcceptCalls
 datasource	dialCtlPeerStatsRefuseCalls
 	ds-source	=	snmp://%snmp%/dialCtlPeerStatsRefuseCalls.%peer-id%.%inst%
 
-
 # Round-Trip-Time counters for last value and last operational code (ok or not)
 
 datasource   rttMonLatestFtpRttOperCompletionTime
@@ -249,12 +261,52 @@ datasource   rttMonLatestHTTPOperSense
 	rrd-ds-type	=	GAUGE
         ds-source       =       snmp://%snmp%/rttMonLatestHTTPOperSense.%inst%
 
+datasource   rttMonLatestJitterOperMOS
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperMOS.%inst%
+datasource   rttMonLatestJitterOperICPI
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperICPI.%inst%
 datasource   rttMonLatestJitterOperRTTMin
-	rrd-ds-type	=	GAUGE
-	ds-source	=	snmp://%snmp%/rttMonLatestJitterOperRTTMin.%inst%
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperRTTMin.%inst%
 datasource   rttMonLatestJitterOperRTTMax
-	rrd-ds-type	=	GAUGE
-	ds-source	=	snmp://%snmp%/rttMonLatestJitterOperRTTMax.%inst%
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperRTTMax.%inst%
+datasource   rttMonLatestJitterOperPacketLossSD
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperPacketLossSD.%inst%
+datasource   rttMonLatestJitterOperPacketLossDS
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperPacketLossDS.%inst%
+datasource   rttMonLatestJitterOperPacketOutOfSequence
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperPacketOutOfSequence.%inst%
+datasource   rttMonLatestJitterOperPacketMIA
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperPacketMIA.%inst%
+datasource   rttMonLatestJitterOperPacketLateArrival
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperPacketLateArrival.%inst%
+datasource   rttMonLatestJitterOperAvgJitter
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperAvgJitter.%inst%
+datasource   rttMonLatestJitterOperAvgJitterSD
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperAvgJitterSD.%inst%
+datasource   rttMonLatestJitterOperAvgJitterDS
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperAvgJitterDS.%inst%
+datasource   rttMonLatestJitterOperAvgJitterOWSD
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperAvgJitterOWSD.%inst%
+datasource   rttMonLatestJitterOperAvgJitterOWDS
+        rrd-ds-type     =       GAUGE
+        ds-source       =       snmp://%snmp%/rttMonLatestJitterOperAvgJitterOWDS.%inst%
+
+
+# Round-Trip-Time counters for last value and last operational code (ok or not)
+
 
 #Datasources for Altiga VPN 3030 and 3060 boxes
 
@@ -510,6 +562,15 @@ targetType	Cisco-7500-Router
 	view   	=	"cpu: cpu1min cpu5min,
 				temperature: tempInlet tempOutlet,
 				memory: mem5minUsed mem5minFree processorRam"
+targetType      Cisco-2800-Router
+        ds              =       "cpu1min, cpu5min, tempInlet, tempState, mem5minUsed, mem5minFree, processorRam"
+        view    =       "cpu: cpu1min cpu5min,
+                                temperature: tempInlet tempState,
+                                memory: mem5minUsed mem5minFree processorRam"
+
+targetType     Cisco-1200-AP
+       ds              =       "mem5minUsed, mem5minFree, processorRam"
+       view            =       "memory: mem5minUsed mem5minFree processorRam"
 
 # 3600 routers do not report temperature -- they only
 # report tempterature states:
@@ -636,15 +697,15 @@ targetType	Cisco-Aironet-Associations
 
 ### SAA (RTR) Cisco service agent types
 
-targetType      saa-ftp
+targetType      ftpAppl
 	ds		=	"rttMonLatestFtpRttOperCompletionTime, rttMonLatestRttOperSense"
 	view	=	"rttAgent: rttMonLatestFtpRttOperCompletionTime rttMonLatestRttOperSense"
 
-targetType      saa-rtt
+targetType      ipIcmpEcho
 	ds		=	"rttMonLatestRttOperCompletionTime, rttMonLatestRttOperSense"
 	view	=	"rttAgent: rttMonLatestRttOperCompletionTime rttMonLatestRttOperSense"
 
-targetType      saa-http
+targetType      httpAppl
 	ds		=	"rttMonLatestHTTPOperRTT, rttMonLatestHTTPOperSense, 
                                  rttMonLatestHTTPOperDNSRTT, rttMonLatestHTTPOperTCPConnectRTT, 
                                  rttMonLatestHTTPOperTransactionRTT"
@@ -652,18 +713,35 @@ targetType      saa-http
                                     rttMonLatestHTTPOperTCPConnectRTT rttMonLatestHTTPOperDNSRTT,
                          rttPreHttp: rttMonLatestHTTPOperTCPConnectRTT rttMonLatestHTTPOperSense rttMonLatestHTTPOperDNSRTT"
 
-targetType	saa-udpecho
+targetType	ipUdpEchoAppl
 	ds	=	"rttMonLatestRttOperCompletionTime, rttMonLatestRttOperSense"
 	view	=	"rttAgent: rttMonLatestRttOperCompletionTime rttMonLatestRttOperSense"
 
-targetType	saa-jitter
-	ds	=	"rttMonLatestRttOperCompletionTime, rttMonLatestRttOperSense,
-			 rttMonLatestJitterOperRTTMin, rttMonLatestJitterOperRTTMax"
-	view	=	"rttAgent: rttMonLatestRttOperCompletionTime rttMonLatestJitterOperRTTMin
-			 tJitterOperRTTMin rttMonLatestJitterOperRTTMax
-			 rttMonLatestRttOperSense"
+targetType      jitterAppl
+        ds      =       "rttMonLatestRttOperCompletionTime, rttMonLatestJitterOperRTTMin, rttMonLatestJitterOperRTTMax, rttMonLatestRttOperSense,
+                                rttMonLatestJitterOperMOS, rttMonLatestJitterOperICPI,
+                                rttMonLatestJitterOperPacketLossSD, rttMonLatestJitterOperPacketLossDS, rttMonLatestJitterOperPacketOutOfSequence,
+                                        rttMonLatestJitterOperPacketMIA, rttMonLatestJitterOperPacketLateArrival,
+                                rttMonLatestJitterOperAvgJitter,
+                                        rttMonLatestJitterOperAvgJitterSD, rttMonLatestJitterOperAvgJitterDS,
+                                        rttMonLatestJitterOperAvgJitterOWSD, rttMonLatestJitterOperAvgJitterOWDS"
+        view    =       "rttAgent: rttMonLatestRttOperCompletionTime rttMonLatestJitterOperRTTMin rttMonLatestJitterOperRTTMax,
 
-### PIX NUmber of connections gloabally
+                        rttOper:  rttMonLatestRttOperSense,
+                         rttCalcs:  rttMonLatestJitterOperICPI rttMonLatestJitterOperMOS,
+                         rttLoss:  rttMonLatestJitterOperPacketLossSD rttMonLatestJitterOperPacketLossDS,
+                         rttError:  rttMonLatestJitterOperPacketOutOfSequence
+                                        rttMonLatestJitterOperPacketMIA rttMonLatestJitterOperPacketLateArrival,
+                         rttJitter: rttMonLatestJitterOperAvgJitter
+                                        rttMonLatestJitterOperAvgJitterSD rttMonLatestJitterOperAvgJitterDS
+                                        rttMonLatestJitterOperAvgJitterOWSD rttMonLatestJitterOperAvgJitterOWDS"
+
+# Get more information from:
+# http://www.cisco.com/en/US/partner/products/ps6350/products_configuration_guide_chapter09186a0080441850.html#wp1052080
+# http://www.cisco.com/en/US/partner/products/sw/iosswrel/ps1839/products_feature_guide09186a0080087c58.html
+
+
+### PIX NUmber of connections globally
 
 targetType     Cisco-pix-stats
        ds               =   "pixConnections, aByteBlocksFree, bByteBlocksFree, cByteBlocksFree,  dByteBlocksFree"
@@ -698,6 +776,12 @@ targetType  frame-interface
 	view	=	"Octets: frCircuitReceivedOctets frCircuitSentOctets,
 				FECN/BECN: frCircuitReceivedFECNs 
 				frCircuitReceivedBECNs"
+targetType  cisco-ap-interface
+       ds      =               "ifInOctets, ifOutOctets,
+                               ifInErrors, ifOutErrors"
+       view    =               "Octets: ifInOctets ifOutOctets,
+                               Errors: ifInErrors ifOutErrors"
+
 
 targetType  cisco-interface
 	ds		=	"ifInOctets, ifOutOctets, ifInErrors,
@@ -1077,7 +1161,7 @@ graph rttMonLatestFtpRttOperCompletionTime
     units       =   "s"
     y-min       =   0
     scale       =   "1000,/"
-    show-max	=   true
+    show-max	=   false
     max-color	=   neongrn
     draw-max-as	=   LINE2
 
@@ -1089,15 +1173,15 @@ graph rttMonLatestRttOperCompletionTime
     inf-marker  =   true
     units       =   "ms"
     y-min	=   0
-    show-max	=   true
+    show-max	=   false
     max-color	=   neongrn
     draw-max-as	=   LINE2
 
 graph rttMonLatestRttOperSense
     color       =   dark-red
-    draw-as     =   AREA
-    legend      =   "Operational value"
-    y-axis      =   "Milliseconds"
+    draw-as     =   LINE1
+    legend      =   "Op Val 1(Ok)2(Disc)4(TmOut)5(Busy)6(NoConn)7(Drop)8(BadSeq)9(BadData)10(App)16(Error)"
+    y-axis      =   "Operation Value"
     units       =   "RTT operational value"
     inf-marker  =   true
     y-min	=   0
@@ -1125,6 +1209,170 @@ graph rttMonLatestJitterOperRTTMax
     show-max	=   true
     max-color	=   neongrn
     draw-max-as	=   LINE1
+
+graph rttMonLatestJitterOperMOS
+    color       =   blue
+    draw-as     =   LINE1
+    legend      =   "MOS (Mean Opinion Score)"
+    y-axis      =   "1.00 - 5.00"
+    scale       =   "100,/"
+    units       =   "units"
+    inf-marker  =   true
+    y-min       =   0
+
+graph rttMonLatestJitterOperICPI
+    color       =   dark-green
+    draw-as     =   AREA
+    legend      =   "CPIF (Calculated Planning Impairment Factor)"
+    y-axis      =   " "
+    units       =   "units"
+    inf-marker  =   true
+    y-min       =   0
+
+graph rttMonLatestJitterOperRTTMin
+    color       =   blue
+    draw-as     =   LINE1
+    legend      =   "Round-trip time Minimum"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   blue
+    draw-max-as =   LINE1
+
+graph rttMonLatestJitterOperRTTMax
+  color       =   red
+    draw-as     =   LINE1
+    legend      =   "Round-trip time Maximum"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   orange
+    draw-max-as =   LINE1
+
+graph rttMonLatestJitterOperPacketLossSD
+    color       =   blue
+    draw-as     =   LINE1
+    legend      =   "Packet Loss Source to Destination"
+    y-axis      =   "Packets"
+    inf-marker  =   true
+    units       =   "pkts"
+    y-min       =   0
+    show-max    =   false
+#    max-color   =   dark-blue
+#    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperPacketLossDS
+    color       =   green
+    draw-as     =   AREA
+    legend      =   "Packet Loss Destination to Source"
+    y-axis      =   "Packets"
+    inf-marker  =   true
+    units       =   "pkts"
+    y-min       =   0
+    show-max    =   false
+
+#    max-color   =   neongrn
+#    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperPacketOutOfSequence
+    color       =   dark-red
+    draw-as     =   LINE1
+    legend      =   "Packet Out of Sequence"
+    y-axis      =   "Packets"
+    inf-marker  =   true
+    units       =   "pkts"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   red
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperPacketMIA
+    color       =   orange
+    draw-as     =   LINE1
+    legend      =   "Packets Missing In Action"
+    y-axis      =   "Packets"
+    inf-marker  =   true
+    units       =   "pkts"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   yellow
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperPacketLateArrival
+    color       =   purple
+    draw-as     =   LINE1
+    legend      =   "Late Arriving Packets"
+    y-axis      =   "Packets"
+    inf-marker  =   true
+    units       =   "pkts"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   purply
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperAvgJitter
+    color       =   dark-green
+    draw-as     =   AREA
+    legend      =   "Average Jitter"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   neongrn
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperAvgJitterSD
+    color       =   dark-red
+    draw-as     =   LINE1
+    legend      =   "Average Jitter Source to Destination"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   red
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperAvgJitterDS
+    color       =   dark-blue
+    draw-as     =   LINE1
+    legend      =   "Average Jitter Destination to Source"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   blue
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperAvgJitterOWSD
+    color       =   orange
+    draw-as     =   LINE1
+    legend      =   "Average Jitter One Way Source to Destination"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   yellow
+    draw-max-as =   LINE2
+
+graph rttMonLatestJitterOperAvgJitterOWDS
+    color       =   purple
+    draw-as     =   LINE1
+    legend      =   "Average Jitter One Way Destination to Source"
+    y-axis      =   "Milliseconds"
+    inf-marker  =   true
+    units       =   "ms"
+    y-min       =   0
+    show-max    =   false
+    max-color   =   purply
+    draw-max-as =   LINE2
 
 # Cisco Chassis
 graph   cpu1min
