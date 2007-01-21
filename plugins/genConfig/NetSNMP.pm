@@ -99,6 +99,8 @@ my %OIDS = (
 my @EXCLUDEFS = qw(^/proc ^/home(/.*)? ^/vol);
 my @INCLUDEFS = ();
 
+my @EXCLUDEIO = ();
+
 ###############################################################################
 ### Private variables
 ###############################################################################
@@ -126,12 +128,14 @@ $self->{class} options:
 
     h                     - Print module help info and exit.
     help
-    excludefs=<regex>     - Exclude any filesystem mtaching the regex from 
+    excludefs=<regex>     - Exclude any filesystem matching the regex from 
                             the config. Can be used multiple times.
     includefs=<regex>     - Explicitly include any filesystem matching the
                             regex in the config.  This can be used to override
 			    implicit or explicit exculdes. Can be used 
 			    multiple times.
+    excludeio=<regex>     - Explicitly exclude any io objects matching the
+                            regex. Can be used multiple times.
     nodiskio              - Don't generate disk I/O targets.
     nofsstats             - Don't generate filesystem targets.
 
@@ -154,6 +158,8 @@ sub parse_flags {
 	    push(@{$self->{excludefs}}, @{$popts->{excludefs}});
 	} elsif ($arg eq 'includefs') {
 	    push(@{$self->{includefs}}, @{$popts->{includefs}});
+	} elsif ($arg eq 'excludeio') {
+	    push(@{$self->{excludeio}}, @{$popts->{excludeio}});
 	} elsif ($arg eq 'nodiskio') {
 	    $self->{nodiskio} = 1;
 	} elsif ($arg eq 'nofsstats') {
@@ -174,6 +180,7 @@ sub init {
 
     $self->{excludefs} = [@EXCLUDEFS];
     $self->{includefs} = [@INCLUDEFS];
+    $self->{excludeio} = [@EXCLUDEIO];
 }
 
 ###############################################################################
@@ -280,9 +287,9 @@ sub do_diskio {
 
     return if (!keys %diskIODevice);
 
-    my $multilev = $opts->{hierarchical};
+    my $multilev = $opts->{req_modular};
 
-    my $dsply = ($multilev) ? "%device%" : "disk %device%";
+    my $dsply = $multilev ? "%device%" : "disk %device%";
 	
     my @defargs = ('target-type'  => "ucd_diskio",
 		   'display-name' => $dsply,
@@ -316,6 +323,7 @@ sub do_diskio {
 
     foreach my $d (sort {alpha_num($diskIODevice{$a},$diskIODevice{$b})} 
 		   keys %diskIODevice) {
+	next if grep({$diskIODevice{$d} =~ m|$_|} @{$self->{excludeio}});
 	my $target = "disk_$diskIODevice{$d}";
 	$target =~ s|/|_|g;
 
@@ -354,7 +362,7 @@ sub do_hrstorage {
 		   'units'        => "%blksize%,*",
 		   );
 
-    my $multilev = $opts->{hierarchical};
+    my $multilev = $opts->{req_modular};
 
     ### If the user requested a hierarchical setup, then create it and 
     ### write a default target to avoid repeating the default args over 
