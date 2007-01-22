@@ -1131,6 +1131,13 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
     }
 
     ###
+    ### Pre-process intdescr{} to remove characters that may cause
+    ### problems in config-tree or during HTML processing.
+    ###
+
+    $intdescr{$index} =~ s/\</\&gt\;/g;
+
+    ###
     ### Do special collection on certain interface types.
     ###
 
