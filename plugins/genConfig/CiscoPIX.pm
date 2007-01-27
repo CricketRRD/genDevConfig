@@ -52,7 +52,8 @@ my %OIDS = (
 ## the names should be contained in the sysdescr string
 ## returned by the devices. The name is a regular expression.
 ################################################################################
-my @types = ( "PIX Firewall");
+my @types = ( "PIX Firewall",
+              "Cisco PIX Security Appliance Version 7");
 
 
 ###############################################################################
@@ -123,6 +124,8 @@ sub discover {
     ### CISCO PIX FIREWALL SECTION
     if ($opts->{sysDescr} =~ /Cisco PIX Firewall Version 6\.[23]/) {
         $opts->{model} = 'PIX-62+';
+    }elsif ($opts->{sysDescr} =~ /Cisco PIX Security Appliance Version 7/) {
+        $opts->{model} = 'PIX-62+';
     }elsif ($opts->{sysDescr} =~ /PIX Firewall/) {
         $opts->{model} = 'PIX';
     }
@@ -142,7 +145,7 @@ sub discover {
     #$opts->{vendor_soft_ver} = get('versionOID');
     $opts->{sysDescr} .= "<BR>" . $opts->{sysLocation};
 
-    # Default feature promotions for Nortel PIX
+    # Default feature promotions for Cisco PIX
     $pixconn = 1 if ($req_pixconn);
     $opts->{ciscopixbox} = 1;
 
