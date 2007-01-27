@@ -7,13 +7,14 @@ has been split up to use the standard CREDITS, CHANGES format and changelog
 is handled by the sourceforge cvs cricket.sourceforge.net
 
 ===============================================================================
-22/01/2007
+27/01/2007
 
 # Version 2_0_0beta14
 #
 # Major new features
 #
 # - New CSS1100 cricket plugin
+# - New Sensatronics EM1 cricket plugin
 # - Support for DS1 serial interface statistics
 
 11/05/2005

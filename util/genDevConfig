@@ -79,7 +79,7 @@ my %ifType_d = ();
 }
 
 
-my $VERSION = 'genDevConfig 2.0.0beta12';
+my $VERSION = 'genDevConfig 2.0.0beta14';
 
 ###############################################################################
 sub version {
