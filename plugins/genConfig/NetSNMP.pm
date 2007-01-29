@@ -213,10 +213,13 @@ sub discover {
 
     register_oids(%OIDS);
 
+    ### Parse flags given to the plugin.
+
+    self->parse_flags($opts{pluginflags});
+
     ###
     ### START DEVICE DISCOVERY SECTION
     ###
-
 
     # Default feature promotions for NetSNMP Devices
     $opts->{netsnmpbox} = 1  if ($opts->{req_vendorbox});
