@@ -13,9 +13,9 @@ logical information:
      device-name
          chassis_target
 
-         special_target1
+         custom_target1
          ...
-         special_targetN
+         custom_targetN
 
          interface_target1
          ...
@@ -41,9 +41,9 @@ logical information:
  - lib/genConfig/pluginUtils.pm       # Utility library for genDevConfig
  - lib/monitorConfig                  # The configuration file for 
                                       # Cricket monitor thresholds
- - plugins/genConfig/Netscreen.pm     # The plugin directory
- - plugins/genConfig/CiscoIOS.pm      # The plugin directory
- - plugins/genConfig/CatalystCatOS.pm # The plugin directory
+ - plugins/genConfig/                 # The plugin directory containing plugins
+ - plugins/genConfig/CiscoIOS.pm      # A plugin
+ - plugins/genConfig/CatalystCatOS.pm # Another plugin
  - plugins/genConfig/...
 
 ##############################################################################
