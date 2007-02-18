@@ -406,14 +406,23 @@ sub custom_targets {
         }
     }
     # Build generic two level Slot/Port mapping for Cisco devices.
-    foreach my $int (keys %ifdescr) {
-        next unless $ifdescr{$int} =~ m(([a-zA-Z]+)(\d+)/(\d+));
+    foreach my $index (keys %ifdescr) {
+        if ($ifdescr{$index} =~ (([a-zA-Z]+)(\d+)$)) {
+            next if (%cardIfSlotNumber && %cardIfPortNumber);
+            ### Fudge the slot/port mapping to the ifdescr for Cisco devices
+            $slotPortMapping{$index} = "$1$2";
+        }
+        next unless $ifdescr{$index} =~ m(([a-zA-Z]+)(\d+)/(\d+)(/?)(\d*));
         ### Build a mapping between the ifDescr and its associated Slot.
-        $slotPortList{$ifdescr{$int}} = $2;
+        $slotPortList{$ifdescr{$index}} = $2;
         ### Build a mapping between the Slot number and its name.
         $slotNameList{$2} = "$1_$2";
-        ### Build a list of existing slots.
+        ### Build a list of existing slots. This will serve to store the 
         $slotList{$2}++;
+        next if (%cardIfSlotNumber && %cardIfPortNumber);
+        $5 = "" if (!$4);
+        $4 = "" if (!$4);
+        $slotPortMapping{$index} = "$1$2/$3$4$5";
     }
 
     ### Get frame relay DLCI info if needed.
