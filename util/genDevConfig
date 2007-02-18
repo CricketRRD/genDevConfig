@@ -4,7 +4,7 @@
 # genDevConfig - Generate Cricket config tree for various network devices.
 #
 #    Copyright (C) 2000 Mike Fisher and Tech Data Corporation
-#    Copyright (C) 2002-2005 Francois Mikus  "fmikus" . "@" . "acktomic.com"
+#    Copyright (C) 2002-2005 Francois Mikus "fmikus" domain "acktomic.com"
 #   
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -139,7 +139,7 @@ my %OID = (
        ### from mib-2.entityMIB.entityMIBObjects.entityPhysical.
        ###      entPhysicalTable.entPhysicalEntry
 
-       'entPhysicalDescr.1' => '1.3.6.1.2.1.47.1.1.1.1.2.1',
+       'entPhysicalDescr'           => '1.3.6.1.2.1.47.1.1.1.1.2',
        'entPhysicalName'            => '1.3.6.1.2.1.47.1.1.1.1.7',
        'entPhysicalDescr'           => '1.3.6.1.2.1.47.1.1.1.1.2',
        'entPhysicalModelName'       => '1.3.6.1.2.1.47.1.1.1.1.13',
@@ -220,6 +220,8 @@ my %opts = (
     'juniperbox'      => 0,
     'req_contivitytunnels' => 1,
     'contivitytunnels' => 0,
+    'req_ciscoslotport' => 1,
+    'ciscoslotport' => 0,
     'req_getconfig' => 0,
     'getconfig'     => 0,
     'req_usev2c'    => 0,
@@ -948,7 +950,7 @@ Info ("......................... [DONE]");
 
 ### Do some preprocessing on the interface list.
 
-Info ("Processing Pre-Process of interface list ");
+Inf ("Processing Pre-Process of interface list ");
 my %unique;
 my $unique = 1;
 my %collect;
@@ -964,7 +966,7 @@ foreach $index (keys %ifdescr) {
     if ( !$opts{collectall} ) {
         if (defined $slotPortMapping{$index}) {
         $collect{$index} = 1 if $collectable{$slotPortMapping{$index}};
-        } else {
+        } else
             $collect{$index} = 0;
         }
     }
@@ -1505,11 +1507,15 @@ sub portlist2array {
     if ($plist eq "none") {
         return %plist;
     }
-
+   
     foreach $chunk (split(/,/, $plist)) {
+        if ($chunk =~ /^[a-zA-Z]+\d+$/) {
+            $plist{$chunk} = 1;
+            next;
+        }
         my($module,$ports) = split(/\//,$chunk,2);
 
-        if ($module !~ /^\d+$/) {
+        if (($module !~ /^\d+$/) || ($module !~ /^[a-zA-Z]+\d+$/)) {
             Warn ("Invalid port specification: $chunk");
             next;
         }
@@ -1523,6 +1529,8 @@ sub portlist2array {
                 $plist{"$module/$port"} = 1;
             }
         } elsif ($ports =~ /^\d+$/) {
+            $plist{"$module/$ports"} = 1;
+        } elsif ($ports =~ /^\d+\/\d+$/) {
             $plist{"$module/$ports"} = 1;
         } else {
             Warn ("Invalid port specification: $chunk\n");
@@ -1643,7 +1651,8 @@ list of numeric interface types.
 
 =item B<-e <regex>>, B<--exception=<regex>>
 
-Interfaces types that match the given regular expression are exceptions to the
+Interfaces types or interface descriptions that match the given regular 
+expression are exceptions to the
 L<--dontcollect> list. Can be used multiple times. Case insensitive.
 
 =item B<-h>, B<--help>
@@ -1747,9 +1756,9 @@ This is a special case of the "-P <option>" syntax.
 
 =item B<-p <portlist>>, B<--ports=<portlist>>
 
-Collect data for the listed ports only. Dont forget to double quote the list.
+Collect data for the listed ports only. Do not forget to double quote the list. This feature is only available for CiscoIOS and CatOS devices that support the OLD-CHASSIS-MIB. Matching is case sensitive.
 
-Example: --ports="0/*,1/5-7,4/6"
+Example: --ports="0/*,1/5-7,4/6,FastEthernet0/*,FastEthernet2"
 
 =item B<--forceplugin=<name>>
 

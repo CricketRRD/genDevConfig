@@ -95,7 +95,6 @@ my %OIDS = (
        ### from mib-2.entityMIB.entityMIBObjects.entityPhysical.
        ###      entPhysicalTable.entPhysicalEntry
 
-       'entPhysicalDescr.1'         => '1.3.6.1.2.1.47.1.1.1.1.2.1',
        'entPhysicalName'            => '1.3.6.1.2.1.47.1.1.1.1.7',
        'entPhysicalDescr'           => '1.3.6.1.2.1.47.1.1.1.1.2',
        'entPhysicalModelName'       => '1.3.6.1.2.1.47.1.1.1.1.13',
@@ -237,6 +236,8 @@ sub discover {
     # Some platforms support additional CPU monitoring
     # currently it's only for cisco 12k and 75xx platforms
     $opts->{req_vipstats} = 0  unless ($opts->{chassisstats} && ($opts->{sysDescr} =~ / GS / || $opts->{sysDescr} =~ / RSP /));
+    # 7x00 Series platforms are starting to show some issues with the OLD-CHASSIS-MIB.
+    $opts->{req_ciscoslotport} = 0  if (($opts->{sysDescr} =~ / GS / || $opts->{sysDescr} =~ / RSP /));
 
      if ($opts->{sysDescr} =~ /IOS\s+(\(tm\)|Software,)/) {
         ($opts->{model}) = $opts->{sysDescr} =~ /IOS\s+(?:\(tm\)|Software,)\s+(\S+)/;
@@ -252,11 +253,6 @@ sub discover {
     if ($opts->{model} =~ /MSFC/) {
         $opts->{chassisPhysicalDescr} = $opts->{model};
     }
-    #else {
-    #    ($opts->{chassisPhysicalDescr}) = get('entPhysicalDescr.1');
-    #}
-    #I do not understand my own code here, I know there can be two cpu's
-    # but what should I do with the info for the second one...
 
     # Default feature promotions for IOS Devices
     # Note: Auto-demote extended mib-ii as we already use cisco proprietary
@@ -268,6 +264,7 @@ sub discover {
     $opts->{framestats} = 1  if ($opts->{req_framestats});
     $opts->{voip} = 1        if ($opts->{req_voip});
     $opts->{vipstats} = 1    if ($opts->{req_vipstats});
+    $opts->{ciscoslotport} = 1    if ($opts->{req_ciscoslotport});
     $opts->{class} = 'cisco';
 
     if  ($opts->{model} eq 'C3500XL' || $opts->{model} eq 'C2900XL') {
@@ -386,7 +383,6 @@ sub custom_targets {
     my %slotList          = %{$data->{slotList}};
     my $file = $opts->{file};
 
-    my $hasSlotMapping = 0;
     ###
     ### START DEVICE CUSTOM CONFIG SECTION
     ###
@@ -395,31 +391,29 @@ sub custom_targets {
 
     my %cardIfSlotNumber;
     my %cardIfPortNumber;
-    if ($opts->{ciscobox}) {
+    if ($opts->{ciscoslotport}) {
         %cardIfSlotNumber = gettable('cardIfSlotNumber');
         %cardIfPortNumber = gettable('cardIfPortNumber');
 
-        # Build a Slot/Port Mapping that is vendor independant
+        # Build a Cisco specific Slot/Port Mapping using deprecated MIB
         foreach my $index (keys %cardIfSlotNumber) {
             if (defined($cardIfPortNumber{$index})){
             next if $cardIfSlotNumber{$index} eq "-1"; # Bug fix for invalid slots numbers
                 $slotPortMapping{$index} = "$cardIfSlotNumber{$index}/$cardIfPortNumber{$index}";
-                $hasSlotMapping = 1;
             } else {
 		$slotPortMapping{$index} = "$cardIfSlotNumber{$index}/0";
-               $hasSlotMapping = 1;
             }
         }
-        # Build the Slot/Port mapping for boxes that do not return slot info.
-        foreach my $int (keys %ifdescr) {
-            next unless $ifdescr{$int} =~ m(([a-zA-Z]+)(\d+)/(\d+));
-            ### Build a mapping between the ifDescr and its associated Slot.
-            $slotPortList{$ifdescr{$int}} = $2;
-            ### Build a mapping between the Slot number and its name.
-            $slotNameList{$2} = "$1_$2";
-            ### Build a list of existing slots.
-            $slotList{$2}++;
-        }
+    }
+    # Build generic two level Slot/Port mapping for Cisco devices.
+    foreach my $int (keys %ifdescr) {
+        next unless $ifdescr{$int} =~ m(([a-zA-Z]+)(\d+)/(\d+));
+        ### Build a mapping between the ifDescr and its associated Slot.
+        $slotPortList{$ifdescr{$int}} = $2;
+        ### Build a mapping between the Slot number and its name.
+        $slotNameList{$2} = "$1_$2";
+        ### Build a list of existing slots.
+        $slotList{$2}++;
     }
 
     ### Get frame relay DLCI info if needed.
