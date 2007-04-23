@@ -895,13 +895,13 @@ if ( %dsx1TotalIndex ) {
   
         $file->writetarget($targetname, '',
          'inst'             => $key,
-         'order'            => $opts->{order},
+         'order'            => $opts{order},
          'interface-name'   => $ifacedescr,
          'long-desc'        => $ldesc,
          'short-desc'       => $ifacedescr,
          'target-type'      => 'dsx-controller'
          );
-        $opts->{order} -= 1;
+        $opts{order} -= 1;
     }
 }
 
@@ -956,7 +956,7 @@ foreach $index (keys %ifdescr) {
     if ( !$opts{collectall} ) {
         if (defined $slotPortMapping{$index}) {
         $collect{$index} = 1 if $collectable{$slotPortMapping{$index}};
-        } else
+        } else {
             $collect{$index} = 0;
         }
     }
