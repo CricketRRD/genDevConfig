@@ -518,16 +518,6 @@ if ($opts{sysObjectID} eq '1.3.6.1.4.1.9.1.525' ||
     $opts{class} = 'cisco';
 }
 
-### CONTIVITY GENERIC SECTION
-### Uses standard MIB 2 but does not ignore tunnel interfaces
-###
-if ($opts{sysDescr} =~ /^CES\s/) {
-
-    $opts{model} = 'Contivity-Generic';
-    $opts{contivitytunnels} = 1    if ($opts{req_contivitytunnels});
-    $opts{class} = 'nortel';
-}
-
 ###########################################################################
 ###
 ### Global exceptions section
@@ -1156,37 +1146,6 @@ foreach $index ( sort { $a <=> $b } keys %ifdescr) {
         ### If it is a sub-interface, only collect in & out stats
 
         push(@config, 'target-type' => 'sub-interface' . $hc);
-        $match = 1;
-
-    } elsif ($opts{contivitytunnels} && $iftype{$index} == 131) {
-
-        ### Contivity IPSec tunnel
-
-        push(@config, 'target-type' => 'standard-interface' . $hc);
-
-        my %contivity;
-        my $src;
-        my $dest;
-        my $tunnel_type;
-
-        ### split ifDescr into relevant parts
-        chop $target;
-        $target =~ s/\=/\,/g;
-        %contivity = split(/,/,$target);
-        $src = $contivity{'LE'};
-        $dest = $contivity{'RE'};
-        $ipaddr{$index} = "IPSEC Tunnel<BR>Source = $src to Destination =  $dest";
-        $src =~ s/\./\_/g;
-        $dest =~ s/\./\_/g;
-        $target = "IPSEC-$src-$dest";
-
-        ### set nominal speed of tunnel to ensure the tunnel is graphed
-        # Contivities may not report speed correctly on tunnel interfaces
-        # This is a fudge but it works for me.  
-        # Could put logic in here to put this to interface speed?
-        # Note from Francois: How to find out index for physical interface 
-
-        $opts{nospeedcheck} = 1 if $ifspeed{$index} == 0;
         $match = 1;
 
     }  elsif (($iftype{$index} == 135)  &&
