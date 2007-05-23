@@ -80,7 +80,7 @@ my(%rttprotocol)=('1'   =>  'notApplicable',
                   '27'  =>  'jitterAppl',
                   '28'  =>  'dlswAppl',
                   '29'  =>  'dhcpAppl',
-                  '30'  =>  'ftpAppl'
+                  '30'  =>  'ftpAppl',
                   '31'  =>  'mplsLspPingAppl',
                   '32'  =>  'voipAppl',
                   '33'  =>  'rtpAppl',
@@ -407,7 +407,7 @@ sub custom_targets {
     }
     # Build generic two level Slot/Port mapping for Cisco devices.
     foreach my $index (keys %ifdescr) {
-        if ($ifdescr{$index} =~ (([a-zA-Z]+)(\d+)$)) {
+        if ($ifdescr{$index} =~ /([a-zA-Z]+)(\d+)$/) {
             next if (%cardIfSlotNumber && %cardIfPortNumber);
             ### Fudge the slot/port mapping to the ifdescr for Cisco devices
             $slotPortMapping{$index} = "$1$2";
@@ -420,9 +420,12 @@ sub custom_targets {
         ### Build a list of existing slots. This will serve to store the 
         $slotList{$2}++;
         next if (%cardIfSlotNumber && %cardIfPortNumber);
-        $5 = "" if (!$4);
-        $4 = "" if (!$4);
-        $slotPortMapping{$index} = "$1$2/$3$4$5";
+        if (!$4){
+                $slotPortMapping{$index} = "$1$2/$3";
+        }else{
+                $slotPortMapping{$index} = "$1$2/$3$4$5";
+        }
+
     }
 
     ### Get frame relay DLCI info if needed.
@@ -686,7 +689,7 @@ if ($opts->{rtragents} && %rttMonCtrlOperState) {
 
         my ($protocol) = $rttprotocol{$rttMonEchoAdminProtocol{$key}};
         next if ($key == 1); # Invalid protocol
-        my ($address) = translateRttTargetAddr($type, $rttMonEchoAdminTargetAddress{$key});
+        my ($address) = translateRttTargetAddr($protocol, $rttMonEchoAdminTargetAddress{$key});
         $ldesc = 'Cisco SLA (RTR) using ' . $protocol . ' for destination <B>'. $address . " - " . $rttMonCtrlAdminTag{$key} . '</B>';
         #ICMP Operational values: <BR>Operational values: 1(Ok) 2(Disconnct) 4(Timeout) 5(Busy) 6(NoConnection) 7(LackIntRes) 8(BadSeqID) 9(BadData) 16(Error)' ;
 
@@ -702,7 +705,7 @@ if ($opts->{rtragents} && %rttMonCtrlOperState) {
             'interface-name'   => $targetname,
             'long-desc'   => $ldesc,
             'short-desc'  => $sdesc,
-            'target-type' => $type
+            'target-type' => $protocol
         );
         $opts->{order} -= 1;
     }
