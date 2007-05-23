@@ -133,7 +133,7 @@ sub discover {
     # Default feature promotions for Sensatronics
     # SNMP v2c not supported by this device 
     $opts->{req_usev2c} = 0;
-    $opts->{usev2c} = 1   # if ($opts->{req_usev2c});
+    $opts->{usev2c} = 1;   # if ($opts->{req_usev2c});
     return;
 }
 
@@ -172,7 +172,7 @@ sub custom_targets {
         'target-type' => 'sensatronics-em1',
     );
 
-    opts->{order} -= 1;
+    $opts->{order} -= 1;
 
     ###
     ### END DEVICE CUSTOM CONFIG SECTION
